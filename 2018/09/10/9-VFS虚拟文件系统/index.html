@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.1.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.1.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.1.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.1.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.1.0" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.1.0',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="前言虚拟文件系统作为内核的子系统为用户空间程序和真正的多个文件系统直接提供了一个接口。简单来说。系统调用先和 VFS 交互，然后 VFS 提供的通用接口在被各个文件系统来实现。 通用文件系统接口虚拟文件系统，一个胶水层，位于内核的底层和用户层之间。它提供了各种抽象数据结构来表示文件和inode，而真实文件系统的实现必须填充这些结构，使得应用程序无需考虑底层文件系统，总是可以使用同样的接口访问和操作">
+<meta name="keywords" content="kernel,filesystem">
+<meta property="og:type" content="article">
+<meta property="og:title" content="VFS 虚拟文件系统">
+<meta property="og:url" content="http://yoursite.com/2018/09/10/9-VFS虚拟文件系统/index.html">
+<meta property="og:site_name" content="Tomoku&#39;s blog">
+<meta property="og:description" content="前言虚拟文件系统作为内核的子系统为用户空间程序和真正的多个文件系统直接提供了一个接口。简单来说。系统调用先和 VFS 交互，然后 VFS 提供的通用接口在被各个文件系统来实现。 通用文件系统接口虚拟文件系统，一个胶水层，位于内核的底层和用户层之间。它提供了各种抽象数据结构来表示文件和inode，而真实文件系统的实现必须填充这些结构，使得应用程序无需考虑底层文件系统，总是可以使用同样的接口访问和操作">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/9-VFS.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/8-fd.jpeg">
+<meta property="og:updated_time" content="2019-05-05T16:44:08.400Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="VFS 虚拟文件系统">
+<meta name="twitter:description" content="前言虚拟文件系统作为内核的子系统为用户空间程序和真正的多个文件系统直接提供了一个接口。简单来说。系统调用先和 VFS 交互，然后 VFS 提供的通用接口在被各个文件系统来实现。 通用文件系统接口虚拟文件系统，一个胶水层，位于内核的底层和用户层之间。它提供了各种抽象数据结构来表示文件和inode，而真实文件系统的实现必须填充这些结构，使得应用程序无需考虑底层文件系统，总是可以使用同样的接口访问和操作">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/9-VFS.png">
+
+
+
+
+
+  
+  
+  <link rel="canonical" href="http://yoursite.com/2018/09/10/9-VFS虚拟文件系统/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>VFS 虚拟文件系统 | Tomoku's blog</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Tomoku's blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">在学习技术的道路上缓慢爬行</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/09/10/9-VFS虚拟文件系统/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Tomoku">
+      <meta itemprop="description" content="勿忘初心">
+      <meta itemprop="image" content="/images/icon.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Tomoku's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">VFS 虚拟文件系统
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-09-10 00:42:20" itemprop="dateCreated datePublished" datetime="2018-09-10T00:42:20+08:00">2018-09-10</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-05-06 00:44:08" itemprop="dateModified" datetime="2019-05-06T00:44:08+08:00">2019-05-06</time>
+              
+            
+          </span>
+
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>虚拟文件系统作为内核的子系统为用户空间程序和真正的多个文件系统直接提供了一个接口。简单来说。系统调用先和 VFS 交互，然后 VFS 提供的通用接口在被各个文件系统来实现。</p>
+<p><strong>通用文件系统接口</strong><br>虚拟文件系统，一个胶水层，位于内核的底层和用户层之间。它提供了各种抽象数据结构来表示文件和inode，而真实文件系统的实现必须填充这些结构，使得应用程序无需考虑底层文件系统，总是可以使用同样的接口访问和操作文件。在 VFS 和 内核 看来，底层的文件系统都是相同的，他们都支持文件、目录、Inode等概念。</p>
+<p><img src="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/9-VFS.png" alt="9-VFS"></p>
+<blockquote>
+<p>进程调用系统调用 write(),系统调用 调用 VFS 中的通用接口 sys_wirte(),通用接口被底层真正的文件系统一一实现。</p>
+</blockquote>
+<h3 id="UNIX-文件系统"><a href="#UNIX-文件系统" class="headerlink" title="UNIX 文件系统"></a>UNIX 文件系统</h3><p>VFS 文件系统的结构不在磁盘中真正存在，在系统启动时装载到内存中，VFS 结构与 EXT 文件系统相似，因为 EXT 文件系统是 linux 的原生文件系统。都有 file,directory,inode。</p>
+<p>Unix 文件系统相关概念：</p>
+<ul>
+<li>file：文件对象主要是对进程而言，对应的操作函数基本和常见的系统调用一样。</li>
+<li>Inode：一个 Inode 对应一个文件，系统查找文件其实找的是 Inode，找到 Inode 后，通过对应关系去 data block 找到真正数据，Inode 中除了数据本身，文件的其他所有信息都包含，例如权限，访问时间，link等。</li>
+<li>surperblock: 文件系统的元数据，在mount 时，从 disk 的 superblock 读取到内存的 surperblock 对象中。</li>
+<li>dentry cache: 系统通过 Inode 在磁盘中找到文件的过程需要耗费大量时间，所以 VFS 引入了 dentry 对象来存放路径缓存，例如/mnt/dir/test.txt，其中/ 、mnt、dir、text.txt 都是一个 dentry 对象。有了缓存后，系统只需要在磁盘中找到 test.txt 的 inode 位置。 </li>
+<li>vfsmount，file_system_type  挂载点以及文件系统属性。</li>
+<li>fs_struct 和 file 偏向于进程相关的对象。</li>
+</ul>
+<h3 id="VFS-的对象和数据结构"><a href="#VFS-的对象和数据结构" class="headerlink" title="VFS 的对象和数据结构"></a>VFS 的对象和数据结构</h3><h4 id="Superblock"><a href="#Superblock" class="headerlink" title="Superblock"></a>Superblock</h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//from &lt;linux/fs.h&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 在挂载时读入初始化</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">super_block</span> &#123;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span>            <span class="title">s_list</span>;</span>           <span class="comment">/* list of all superblocks */</span></span><br><span class="line">    ...</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">super_operations</span>     <span class="title">s_op</span>;</span>             <span class="comment">/* superblock methods */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span>            <span class="title">s_inodes</span>;</span>           </span><br><span class="line">    </span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">super_operations</span> &#123;</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">inode</span> *(*<span class="title">alloc_inode</span>)(<span class="title">struct</span> <span class="title">super_block</span> *<span class="title">sb</span>);</span> <span class="keyword">void</span> (*destroy_inode)(struct inode *);</span><br><span class="line"><span class="keyword">void</span> (*dirty_inode) (struct inode *);</span><br><span class="line"><span class="keyword">int</span> (*write_inode) (struct inode *, <span class="keyword">int</span>);</span><br><span class="line"><span class="keyword">void</span> (*drop_inode) (struct inode *);</span><br><span class="line"><span class="keyword">void</span> (*delete_inode) (struct inode *);</span><br><span class="line"><span class="keyword">void</span> (*put_super) (struct super_block *);</span><br><span class="line"><span class="keyword">void</span> (*write_super) (struct super_block *);</span><br><span class="line"><span class="keyword">int</span> (*sync_fs)(struct super_block *sb, <span class="keyword">int</span> wait); <span class="keyword">int</span> (*freeze_fs) (struct super_block *);</span><br><span class="line"><span class="keyword">int</span> (*unfreeze_fs) (struct super_block *);</span><br><span class="line"><span class="keyword">int</span> (*statfs) (struct dentry *, struct kstatfs *);</span><br><span class="line"><span class="keyword">int</span> (*remount_fs) (struct super_block *, <span class="keyword">int</span> *, <span class="keyword">char</span> *);</span><br><span class="line"><span class="keyword">void</span> (*clear_inode) (struct inode *);</span><br><span class="line"><span class="keyword">void</span> (*umount_begin) (struct super_block *);</span><br><span class="line"><span class="keyword">int</span> (*show_options)(struct seq_file *, struct vfsmount *);</span><br><span class="line"><span class="keyword">int</span> (*show_stats)(struct seq_file *, struct vfsmount *);</span><br><span class="line">...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">sb-&gt;s_op-&gt;write_super(sb);</span><br><span class="line"><span class="comment">// C 不是面向对象的，需要这种方式来调用函数。但其实 VFS 中大多数概念都是面向对象的思想来实现的。</span></span><br></pre></td></tr></table></figure>
+<h4 id="Inode"><a href="#Inode" class="headerlink" title="Inode"></a>Inode</h4><ul>
+<li>文件系统不管实际是否有 Inode ，想在 linux 中使用，必须将 Inode 虚拟化出来装载到内存中。</li>
+<li>有的文件系统 没有 i_atime  i_mtime,  i_atime 概念，可以直接填写为 NULL，或者不往磁盘里刷脏。</li>
+<li>可以看到 inode 的一些函数中传参都是 dentry，意味着在获取 Inode 之前，系统已经拿到对应的 dentry，也就是先有 dentry，再去找 inode。<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">//from &lt;linux/fs.h&gt;</span><br><span class="line"></span><br><span class="line">struct inode_operations &#123;</span><br><span class="line">int (*create) (struct inode *,struct dentry *,int, struct nameidata *);</span><br><span class="line">struct dentry * (*lookup) (struct inode *,struct dentry *, struct nameidata *); int (*link) (struct dentry *,struct inode *,struct dentry *);</span><br><span class="line">int (*unlink) (struct inode *,struct dentry *);</span><br><span class="line">int (*symlink) (struct inode *,struct dentry *,const char *);</span><br><span class="line">int link(struct dentry *old_dentry, struct inode *dir,struct dentry *dentry)</span><br><span class="line">//Invoked by the link() system call to create a hard link of the file old_dentry in the directory dir with the new filename dentry.</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h4 id="dentry"><a href="#dentry" class="headerlink" title="dentry"></a>dentry</h4><ul>
+<li>dentry：目录项是描述文件的逻辑属性，只存在于内存中，并没有实际对应的磁盘上的描述，更确切的说是存在于内存的目录项缓存，为了提高查找性能而设计。注意不管是文件夹还是最终的文件，都是属于目录项，所有的目录项在一起构成一颗庞大的目录树。</li>
+<li>一个有效的dentry结构必定有一个inode结构，这是因为一个目录项要么代表着一个文件，要么代表着一个目录，而目录实际上也是文件。所以，只要dentry结构是有效的，则其指针d_inode必定指向一个inode结构。</li>
+<li>dentry 有三个状态：<ul>
+<li>used：正在被用的，通过d_count记录用户数量，不能被回收。</li>
+<li>unused：没有被用的，d_count是0，对应 Inode 是有效的。可以被回收</li>
+<li>negative：对应 Inode 无效，被删除了，可以被回收。及时无效也不会立即被删除，因为同样有用，告知系统文件不存在。</li>
+</ul>
+</li>
+<li>dentry cache 的存放：<ul>
+<li>used 通过i_dentry属性放在链表中。</li>
+<li>还有一个双向链表存放最近使用的dentry(unused and negative),链表头尾决定新旧程度，以及回收顺序。</li>
+<li>hash 表<code>dentry_hashtable</code> 和 hash 函数<code>d_lookup()</code>，来定位要查找的 dentry。具体实现很复杂，详细请看相关文档。</li>
+</ul>
+</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//from &lt;linux/fs.h&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">dentry</span> &#123;</span> </span><br><span class="line"><span class="keyword">atomic_t</span>        d_count; </span><br><span class="line"><span class="keyword">unsigned</span> <span class="keyword">int</span>    d_flags;</span><br><span class="line"><span class="keyword">spinlock_t</span>      d_lock;</span><br><span class="line"><span class="keyword">int</span>             d_mounted;</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">inode</span>    *<span class="title">d_inode</span>;</span>           <span class="comment">/* associated inode */</span> </span><br><span class="line">...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">dentry_operations</span> &#123;</span></span><br><span class="line"><span class="keyword">int</span> (*d_revalidate) (struct dentry *, struct nameidata *);</span><br><span class="line"><span class="keyword">int</span> (*d_hash) (struct dentry *, struct qstr *);</span><br><span class="line"><span class="keyword">int</span> (*d_compare) (struct dentry *, struct qstr *, struct qstr *); <span class="keyword">int</span> (*d_delete) (struct dentry *);</span><br><span class="line"><span class="keyword">void</span> (*d_release) (struct dentry *);</span><br><span class="line"><span class="keyword">void</span> (*d_iput) (struct dentry *, struct inode *);</span><br><span class="line"><span class="keyword">char</span> *(*d_dname) (struct dentry *, <span class="keyword">char</span> *, <span class="keyword">int</span>);</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h4 id="file"><a href="#file" class="headerlink" title="file"></a>file</h4><ul>
+<li>文件对象对应进程打开的文件，不是磁盘中的文件。</li>
+<li>通过 <code>open()</code>系统调用创建，<code>close()</code>删除。</li>
+<li>文件对象函数是我们那些常见的系统调用的基础，read（）write（）其实调用的就是 file 的函数。<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">struct file_operations &#123; struct module *owner;</span><br><span class="line">ssize_t (*read) (struct file *, char __user *, size_t, loff_t *); ssize_t (*write) (struct file *, const char __user *, size_t, loff_t *); ssize_t (*aio_read) (struct kiocb *, const struct iovec *,unsigned long, loff_t);</span><br><span class="line">ssize_t (*aio_write) (struct kiocb *, const struct iovec *,unsigned long, loff_t);</span><br><span class="line">int (*readdir) (struct file *, void *, filldir_t);</span><br><span class="line">long (*unlocked_ioctl) (struct file *, unsigned int, unsigned long); long (*compat_ioctl) (struct file *, unsigned int, unsigned long); int (*mmap) (struct file *, struct vm_area_struct *);</span><br><span class="line">int (*open) (struct inode *, struct file *);</span><br><span class="line">int (*flush) (struct file *, fl_owner_t id);</span><br><span class="line">int (*release) (struct inode *, struct file *);</span><br><span class="line">int (*fsync) (struct file *, struct dentry *, int datasync);</span><br><span class="line">int (*aio_fsync) (struct kiocb *, int datasync);</span><br><span class="line">int (*fasync) (int, struct file *, int);</span><br><span class="line">int (*lock) (struct file *, int, struct file_lock *);</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h4 id="files-struct"><a href="#files-struct" class="headerlink" title="files_struct"></a>files_struct</h4><ul>
+<li>这是一个进程相关的对象，进程打开的文件和文件描述符相关的信息都在里面。</li>
+<li>fd_array 指向打开文件的链表。<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">//from &lt;linux/fdtable.h&gt;.</span><br><span class="line"></span><br><span class="line">struct files_struct &#123;</span><br><span class="line">  /*</span><br><span class="line">   * read mostly part</span><br><span class="line">   */</span><br><span class="line">        atomic_t count;</span><br><span class="line">        struct fdtable __rcu *fdt;</span><br><span class="line">        struct fdtable fdtab;</span><br><span class="line">  /*</span><br><span class="line">   * written part on a separate cache line in SMP</span><br><span class="line">   */</span><br><span class="line">        spinlock_t file_lock ____cacheline_aligned_in_smp;</span><br><span class="line">        int next_fd;</span><br><span class="line">        unsigned long close_on_exec_init[1];</span><br><span class="line">        unsigned long open_fds_init[1];</span><br><span class="line">        struct file __rcu * fd_array[NR_OPEN_DEFAULT];</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<blockquote>
+<p>进程如何找到打开的文件，通过文件描述符，file_struct,dentry,inode。<br><img src="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/8-fd.jpeg" alt="8-fd"></p>
+</blockquote>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/kernel/" rel="tag"><i class="fa fa-tag"></i> kernel</a>
+          
+            <a href="/tags/filesystem/" rel="tag"><i class="fa fa-tag"></i> filesystem</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/08/19/8-linux分区和文件系统结构/" rel="next" title="linux 分区和文件系统结构">
+                <i class="fa fa-chevron-left"></i> linux 分区和文件系统结构
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/09/11/10-japanese-redhat/" rel="prev" title="japanese-redhat">
+                japanese-redhat <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/icon.jpg" alt="Tomoku">
+            
+              <p class="site-author-name" itemprop="name">Tomoku</p>
+              <div class="site-description motion-element" itemprop="description">勿忘初心</div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">13</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  
+                    
+                      <a href="/tags/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">12</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+            <div class="links-of-author motion-element">
+              
+                <span class="links-of-author-item">
+                  
+                  
+                    
+                  
+                  
+                    
+                  
+                  <a href="https://github.com/Tomoku-dm" title="GitHub &rarr; https://github.com/Tomoku-dm" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+                </span>
+              
+                <span class="links-of-author-item">
+                  
+                  
+                    
+                  
+                  
+                    
+                  
+                  <a href="/dm990107744@gmail.com" title="E-Mail &rarr; dm990107744@gmail.com"><i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                </span>
+              
+            </div>
+          
+
+          
+
+          
+          
+
+          
+            
+          
+	 <iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width="298" height="52" src="//music.163.com/outchain/player?type=2&id=409650927&auto=0&height=32"></iframe>
+	  
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#UNIX-文件系统"><span class="nav-number">2.</span> <span class="nav-text">UNIX 文件系统</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#VFS-的对象和数据结构"><span class="nav-number">3.</span> <span class="nav-text">VFS 的对象和数据结构</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Superblock"><span class="nav-number">3.1.</span> <span class="nav-text">Superblock</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Inode"><span class="nav-number">3.2.</span> <span class="nav-text">Inode</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#dentry"><span class="nav-number">3.3.</span> <span class="nav-text">dentry</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#file"><span class="nav-number">3.4.</span> <span class="nav-text">file</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#files-struct"><span class="nav-number">3.5.</span> <span class="nav-text">files_struct</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Tomoku</span>
+
+  
+
+  
+</div>
+<!--
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.1.0</div>
+
+
+
+
+-->
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/utils.js?v=7.1.0"></script>
+
+  <script src="/js/motion.js?v=7.1.0"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/affix.js?v=7.1.0"></script>
+
+  <script src="/js/schemes/pisces.js?v=7.1.0"></script>
+
+
+
+
+  
+  <script src="/js/scrollspy.js?v=7.1.0"></script>
+<script src="/js/post-details.js?v=7.1.0"></script>
+
+
+
+  
+
+
+  <script src="/js/next-boot.js?v=7.1.0"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

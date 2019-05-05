@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.1.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.1.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.1.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.1.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.1.0" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.1.0',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="内存页 MMU ：内存管理单元，将虚拟内存转化为物理地址的硬件。   因为 MMU 通常以页为单位处理内存，所以从虚拟内存的角度来说，内核中页是最小的单位。 一般 32 位系统使用4k页，64 位系统使用8k页。 内核使用 struct page 结构体存放物理页。page 与物理页相关，而非虚拟页，当内存页被swap后，可能不再和同一个page相关联。 可以通过page_address(page">
+<meta name="keywords" content="kernel,memory">
+<meta property="og:type" content="article">
+<meta property="og:title" content="内核中内存管理">
+<meta property="og:url" content="http://yoursite.com/2018/09/16/12-内核中内存管理/index.html">
+<meta property="og:site_name" content="Tomoku&#39;s blog">
+<meta property="og:description" content="内存页 MMU ：内存管理单元，将虚拟内存转化为物理地址的硬件。   因为 MMU 通常以页为单位处理内存，所以从虚拟内存的角度来说，内核中页是最小的单位。 一般 32 位系统使用4k页，64 位系统使用8k页。 内核使用 struct page 结构体存放物理页。page 与物理页相关，而非虚拟页，当内存页被swap后，可能不再和同一个page相关联。 可以通过page_address(page">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://p15fchoy9.bkt.clouddn.com/slab-cache.png">
+<meta property="og:updated_time" content="2019-05-05T16:55:36.909Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="内核中内存管理">
+<meta name="twitter:description" content="内存页 MMU ：内存管理单元，将虚拟内存转化为物理地址的硬件。   因为 MMU 通常以页为单位处理内存，所以从虚拟内存的角度来说，内核中页是最小的单位。 一般 32 位系统使用4k页，64 位系统使用8k页。 内核使用 struct page 结构体存放物理页。page 与物理页相关，而非虚拟页，当内存页被swap后，可能不再和同一个page相关联。 可以通过page_address(page">
+<meta name="twitter:image" content="http://p15fchoy9.bkt.clouddn.com/slab-cache.png">
+
+
+
+
+
+  
+  
+  <link rel="canonical" href="http://yoursite.com/2018/09/16/12-内核中内存管理/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>内核中内存管理 | Tomoku's blog</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Tomoku's blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">在学习技术的道路上缓慢爬行</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/09/16/12-内核中内存管理/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Tomoku">
+      <meta itemprop="description" content="勿忘初心">
+      <meta itemprop="image" content="/images/icon.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Tomoku's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">内核中内存管理
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-09-16 00:54:59" itemprop="dateCreated datePublished" datetime="2018-09-16T00:54:59+08:00">2018-09-16</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-05-06 00:55:36" itemprop="dateModified" datetime="2019-05-06T00:55:36+08:00">2019-05-06</time>
+              
+            
+          </span>
+
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="内存页"><a href="#内存页" class="headerlink" title="内存页"></a>内存页</h3><blockquote>
+<p>MMU ：内存管理单元，将虚拟内存转化为物理地址的硬件。</p>
+</blockquote>
+<ul>
+<li>因为 MMU 通常以页为单位处理内存，所以从虚拟内存的角度来说，内核中页是最小的单位。</li>
+<li>一般 32 位系统使用4k页，64 位系统使用8k页。</li>
+<li>内核使用 struct page 结构体存放物理页。page 与物理页相关，而非虚拟页，当内存页被swap后，可能不再和同一个page相关联。</li>
+<li>可以通过page_address(page) 函数获取物理页page 对应的逻辑地址。<h4 id="page-的内核代码"><a href="#page-的内核代码" class="headerlink" title="page 的内核代码"></a>page 的内核代码</h4></li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">defined in &lt;linux/mm_types.h&gt;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">page</span> &#123;</span> </span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> flags;    <span class="comment">//内存页状态，定义在&lt;linux/page-flags.h&gt;.</span></span><br><span class="line">    <span class="keyword">atomic_t</span> _count;        <span class="comment">//引用计数</span></span><br><span class="line">    <span class="keyword">atomic_t</span> _mapcount; </span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> <span class="keyword">private</span>; </span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">address_space</span> *<span class="title">mapping</span>;</span> </span><br><span class="line">    <span class="keyword">pgoff_t</span> index; </span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">lru</span>;</span> </span><br><span class="line">    <span class="keyword">void</span> *<span class="keyword">virtual</span>;          <span class="comment">//在虚拟内存中的地址</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h3 id="ZONE"><a href="#ZONE" class="headerlink" title="ZONE"></a>ZONE</h3><p>由于硬件的原因，内核对于内存中不同物理地址的内存并不一视同仁。由于这种限制，内存将内存页划分了区（zone）。ZONE的划分是为了管理页的一种逻辑分组。内存分配不能同时在两个zone 分配。</p>
+<p>有些硬件存在下面两种缺陷引起的内存寻址问题，所以需要将内存分区。  </p>
+<ol>
+<li>一些硬件只能用特定的内存地址来执行DMA（直接内存访问）。</li>
+<li>一些体系结构的内存物理寻址范围大于虚拟寻址范围，导致一些内存不能映射到内核空间。</li>
+</ol>
+<p><strong>linux 主要有下面 4 种 ZONE</strong></p>
+<blockquote>
+<ol>
+<li>ZONE_DMA—This zone contains pages that can undergo DMA.</li>
+<li>ZONE_DMA32—Like ZOME_DMA, this zone contains pages that can undergo DMA. Unlike ZONE_DMA, these pages are accessible only by 32-bit devices. On some architectures, this zone is a larger subset of memory.</li>
+<li>ZONE_NORMAL—This zone contains normal, regularly mapped, pages.</li>
+<li>ZONE_HIGHMEM—This zone contains “high memory,” which are pages not perma￾nently mapped into the kernel’s address space.</li>
+</ol>
+</blockquote>
+<p>例如 X86-32 架构，ISA 设备只能访问物理内存的前16M，高于896M的内存不能直接映射。剩下的就是NORMAL区。如果体系结构没有限制，那么全部都是NORMAL区。</p>
+<table>
+<thead>
+<tr>
+<th>Zone</th>
+<th>Description</th>
+<th>Physical Memory</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ZONE_DMA</td>
+<td>DMA-able</td>
+<td>pages &lt; 16MB</td>
+</tr>
+<tr>
+<td>ZONE_NORMAL</td>
+<td>Normally</td>
+<td>addressable pages 16–896MB</td>
+</tr>
+<tr>
+<td>ZONE_HIGHMEM</td>
+<td>Dynamically</td>
+<td>mapped pages &gt; 896MB</td>
+</tr>
+</tbody>
+</table>
+<p><strong>zone 的水线</strong>：每一个zone 都有自己的最小值，最低值，最高值三个水线，使用水线设置合适的内存消耗基准，水线随着空暇内存变化</p>
+<h4 id="zone-的内核代码"><a href="#zone-的内核代码" class="headerlink" title="zone 的内核代码"></a>zone 的内核代码</h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">defined in &lt;linux/mmzone.h&gt;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">zone</span> &#123;</span> </span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> watermark[NR_WMARK];          <span class="comment">//持有该区的最小最低最高的水位值。</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> lowmem_reserve[MAX_NR_ZONES]; </span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">per_cpu_pageset</span> <span class="title">pageset</span>[<span class="title">NR_CPUS</span>];</span> </span><br><span class="line">    <span class="keyword">spinlock_t</span> lock;                            <span class="comment">//自旋锁</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">free_area</span> <span class="title">free_area</span>[<span class="title">MAX_ORDER</span>] </span></span><br><span class="line"><span class="class">    <span class="title">spinlock_t</span> <span class="title">lru_lock</span>;</span> </span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">zone_lru</span> &#123;</span></span><br><span class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">list</span>;</span> </span><br><span class="line">        <span class="keyword">unsigned</span> <span class="keyword">long</span> nr_saved_scan;</span><br><span class="line">    &#125;lru[NR_LRU_LISTS]; </span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">zone_reclaim_stat</span> <span class="title">reclaim_stat</span>;</span> </span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> pages_scanned; </span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> flags; </span><br><span class="line">    <span class="keyword">atomic_long_t</span> vm_stat[NR_VM_ZONE_STAT_ITEMS]; </span><br><span class="line">    <span class="keyword">int</span> prev_priority; </span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">int</span> inactive_ratio; </span><br><span class="line">    <span class="keyword">wait_queue_head_t</span> *wait_table; </span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> wait_table_hash_nr_entries; </span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> wait_table_bits; </span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">pglist_data</span> *<span class="title">zone_pgdat</span>;</span> </span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> zone_start_pfn; </span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> spanned_pages; </span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> present_pages; </span><br><span class="line">    <span class="keyword">const</span> <span class="keyword">char</span> *name;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h3 id="获取页"><a href="#获取页" class="headerlink" title="获取页"></a>获取页</h3><p>内核提供了一些请求内存和释放内存的底层接口，</p>
+<table>
+<thead>
+<tr>
+<th>请求内存函数</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>alloc_page(gfp_mask)</td>
+<td>Allocates a single page and returns a pointer to its</td>
+</tr>
+<tr>
+<td>alloc_pages(gfp_mask, order)</td>
+<td>Allocates 2order pages and returns a pointer to the first page’s page structure </td>
+</tr>
+<tr>
+<td>__get_free_page(gfp_mask)</td>
+<td>Allocates a single page and returns a pointer to its logical address</td>
+</tr>
+<tr>
+<td>__get_free_pages(gfp_mask, order)</td>
+<td>Allocates 2order pages and returns a pointer to the first page’s logical address</td>
+</tr>
+<tr>
+<td>get_zeroed_page(gfp_mask)</td>
+<td>Allocates a single page, zero its contents and returns a pointer to its logical address</td>
+</tr>
+</tbody>
+</table>
+<p>释放内存接口:<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">void</span> __free_pages(struct page *page, <span class="keyword">unsigned</span> <span class="keyword">int</span> order) </span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">free_pages</span><span class="params">(<span class="keyword">unsigned</span> <span class="keyword">long</span> addr, <span class="keyword">unsigned</span> <span class="keyword">int</span> order)</span> </span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">free_page</span><span class="params">(<span class="keyword">unsigned</span> <span class="keyword">long</span> addr)</span></span></span><br></pre></td></tr></table></figure></p>
+<h4 id="kmalloc"><a href="#kmalloc" class="headerlink" title="kmalloc()"></a>kmalloc()</h4><p>和上面获取页的接口不同，<code>kmalloc()</code>主要用于申请字节为单位的内存。<code>kmalloc()</code> 返回一个指向内存块的指针，至少是 size 大小，分配的内存区在物理上是连续的。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> * <span class="title">kmalloc</span><span class="params">(<span class="keyword">size_t</span> size, <span class="keyword">gfp_t</span> flags)</span></span></span><br></pre></td></tr></table></figure>
+<h5 id="gfp-mask-标志"><a href="#gfp-mask-标志" class="headerlink" title="gfp_mask 标志"></a>gfp_mask 标志</h5><ol>
+<li>行为修饰符：分配内存时的动作</li>
+<li>区修饰符：从哪个 zone 分配内存</li>
+<li>类型：组合上面两个<ul>
+<li>GFP_ATOMIC 分配内存是不能睡眠，在内存紧缺时容易失败。</li>
+<li>GFP_KERNEL 可以睡眠，用于安全调度的进程上下文中，成功率高。</li>
+</ul>
+</li>
+</ol>
+<p>Situation | Solution<br>|—|—|<br>Process context, can sleep | Use GFP_KERNEL.<br>Process context, cannot sleep | Use GFP_ATOMIC, or perform your allocations with GFP_KERNEL at an earlier or later point when you can sleep<br>Interrupt handler | Use GFP_ATOMIC.<br>Softirq | Use GFP_ATOMIC.<br>Tasklet | Use GFP_ATOMIC.<br>Need DMA-able memory, can | Use (GFP_DMA | GFP_KERNEL). sleep<br>Need DMA-able memory, cannot | Use (GFP_DMA | GFP_ATOMIC), or perform your sleep allocation at an earlier point when you can sleep. </p>
+<h5 id="kfree"><a href="#kfree" class="headerlink" title="kfree()"></a>kfree()</h5><p>kfree() 释放由kmalloc()申请的内存。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">kfree</span><span class="params">(<span class="keyword">const</span> <span class="keyword">void</span> *ptr)</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="comment">//例子</span></span></span><br><span class="line"><span class="function"><span class="keyword">char</span> *buf</span>;</span><br><span class="line">buf = kmalloc(BUF_SIZE, GFP_ATOMIC); <span class="keyword">if</span> (!buf)</span><br><span class="line"><span class="comment">/* error allocating memory ! */</span></span><br><span class="line">kfree(buf);</span><br></pre></td></tr></table></figure>
+<h4 id="vmalloc"><a href="#vmalloc" class="headerlink" title="vmalloc()"></a>vmalloc()</h4><p>类似<code>kmalloc</code>，但是物理内存地址可以不连续，虚拟内存地址是连续的。可以睡眠。</p>
+<p>一般只有硬件要求得到物理地址连续的内存。软件可以使用只有虚拟地址连续的内存。很多内核代码虽然不需要连续的物理内存，但还是使用<code>kmalloc</code>，因为性能好，不需要做逻辑映射。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//declared in &lt;linux/vmalloc.h&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> * <span class="title">vmalloc</span><span class="params">(<span class="keyword">unsigned</span> <span class="keyword">long</span> size)</span></span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">vfree</span><span class="params">(<span class="keyword">const</span> <span class="keyword">void</span> *addr)</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="comment">//例子</span></span></span><br><span class="line"><span class="function"><span class="keyword">char</span> *buf</span>;</span><br><span class="line">buf = vmalloc(<span class="number">16</span> * PAGE_SIZE); <span class="comment">/* get 16 pages */</span> <span class="keyword">if</span> (!buf)</span><br><span class="line">vfree(buf);</span><br></pre></td></tr></table></figure>
+<h3 id="Slab-层"><a href="#Slab-层" class="headerlink" title="Slab 层"></a>Slab 层</h3><p>有很多对象存放在链表结构中，在不用的时候空闲链表也已经占用内存。内核不能不能控制这些空闲链表的回收，尤其是在内存紧缺时。所以引入了 slab 分配器。slab 扮演了一个通用的数据结构缓存角色。  </p>
+<p>slab 把不同类型的对象放到不同的 caches 中。 一个 slab 由一个或者多个物理上的连续页组成，一般情况只有一个页，每一个cache 有多个 slab。</p>
+<p><img src="http://p15fchoy9.bkt.clouddn.com/slab-cache.png" alt="image"></p>
+<p>一个 slab 有三个状态：full, partial, or empty. 先从 partial 开始填充。</p>
+<p>cache 用 kmem_cache 结构表示 包含三个链表 slabs_full,slabs_partial,slabs_empty,链表中包含所有的 slab。  </p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">slab</span> &#123;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span>    <span class="title">list</span>;</span> <span class="comment">/* full, partial, or empty list */</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span>       colouroff; <span class="comment">/* offset for the slab coloring */</span> </span><br><span class="line">    <span class="keyword">void</span>                *s_mem; <span class="comment">/* first object in the slab */</span>  </span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">int</span>        inuse; <span class="comment">/* allocated objects in the slab */</span></span><br><span class="line">    <span class="keyword">kmem_bufctl_t</span>       <span class="built_in">free</span>; <span class="comment">/* first free object, if any */</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">slab  的创建：</span><br><span class="line">通过 *kmem_getpages（）中调用的 _get_free_pages()函数分配内存页。</span><br></pre></td></tr></table></figure>
+<p>slab 是在 cache 的基础之上，提供给内核一个简单的接口，通过接口来对 cache 进行分配和撤销。slab 起一个分配器的作用，可以为具体的 object 分配内存。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//cache 的创建（slab 分配器的接口）：</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//返回一个指向 cache 的指针。align 是 slab 第一个对象的偏移量，用于内存对齐</span></span><br><span class="line"><span class="function">struct kmem_cache * <span class="title">kmem_cache_create</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *name, <span class="keyword">size_t</span> size,<span class="keyword">size_t</span> align, <span class="keyword">unsigned</span> <span class="keyword">long</span> flags, <span class="keyword">void</span> (*ctor)(<span class="keyword">void</span> *))</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">//撤销 cache</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">kmem_cache_destroy</span><span class="params">(struct kmem_cache *cachep)</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="comment">//创建 cache 后，获取对象，没有空闲 slab 的话，通过上面的*kmem_getpages（）获取新的页。</span></span></span><br><span class="line"><span class="function"><span class="keyword">void</span> * <span class="title">kmem_cache_alloc</span><span class="params">(struct kmem_cache *cachep, <span class="keyword">gfp_t</span> flags)</span></span></span><br></pre></td></tr></table></figure>
+<h4 id="task-struct-对象的-slab-和-cache-创建例子"><a href="#task-struct-对象的-slab-和-cache-创建例子" class="headerlink" title="task_struct 对象的 slab 和 cache 创建例子"></a>task_struct 对象的 slab 和 cache 创建例子</h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//1.首先创建一个全局变量存放 task_struct 的 cache</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">kmem_cache</span> *<span class="title">task_struct_cachep</span>;</span></span><br><span class="line"></span><br><span class="line">task_struct_cachep = kmem_cache_create(“task_struct”, <span class="keyword">sizeof</span>(struct task_struct),ARCH_MIN_TASKALIGN, SLAB_PANIC | SLAB_NOTRACK, <span class="literal">NULL</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">//2.进程调用 fork()时，会创建新的process descriptor：</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span> *<span class="title">tsk</span>;</span></span><br><span class="line">tsk = kmem_cache_alloc(task_struct_cachep, GFP_KERNEL); </span><br><span class="line"><span class="keyword">if</span> (!tsk)</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">//3.process descriptor 被撤销</span></span><br><span class="line">kmem_cache_free(task_struct_cachep, tsk);</span><br><span class="line"></span><br><span class="line"><span class="comment">//4.task_struct_cachep cache 是不会被撤销的，因为内核经常要用，非要撤销的话：</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">int</span> err;</span><br><span class="line">err = kmem_cache_destroy(task_struct_cachep); <span class="keyword">if</span> (err)</span><br><span class="line"><span class="comment">/* error destroying cache */</span></span><br></pre></td></tr></table></figure>
+<h3 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h3><h4 id="Stack-上内存的静态分配"><a href="#Stack-上内存的静态分配" class="headerlink" title="Stack 上内存的静态分配"></a>Stack 上内存的静态分配</h4><p>32位 和 64位 页的大小为4K 和 8K，一般进程有两页的内核栈，也可以设置单页内核栈。</p>
+<p>随着运行时间的增加，物理内存碎片增加，分配连续的页越来越难。当单页栈设置后，中断程序不再和进程放在同一个栈内，有自己的中断栈。</p>
+<p>栈的溢出会覆盖紧邻堆栈末端的内容，溢出后 down 机还好，否则会破坏数据。</p>
+<h4 id="高端内存的映射"><a href="#高端内存的映射" class="headerlink" title="高端内存的映射"></a>高端内存的映射</h4><p>高端内存的永久映射数量是有限的，不需要时需要解除。通过函数<code>kmap</code>进行映射，可以睡眠。<code>kmap_atomic</code>提供了原子性的临时映射。不会被阻塞，禁止内核抢断。</p>
+<h4 id="per-CPU-新接口"><a href="#per-CPU-新接口" class="headerlink" title="per CPU 新接口"></a>per CPU 新接口</h4><p>对于 smp 系统，多个 cpu 可以有自己才能访问的数据，这样不需要锁，只需要注意内核抢占的问题即可。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">void</span> *percpu_ptr; </span><br><span class="line"><span class="keyword">unsigned</span> <span class="keyword">long</span> *foo;</span><br><span class="line"></span><br><span class="line">percpu_ptr = alloc_percpu(<span class="keyword">unsigned</span> <span class="keyword">long</span>);    <span class="comment">//为 cpu 动态分配内存，类似 kmalloc()</span></span><br><span class="line"><span class="keyword">if</span> (!ptr)</span><br><span class="line"><span class="comment">/* error allocating memory .. */</span></span><br><span class="line"></span><br><span class="line">foo = get_cpu_var(percpu_ptr);  <span class="comment">//获取当前 CPU 上的指定数据，会禁止内核抢断</span></span><br><span class="line"><span class="comment">/* manipulate foo .. */</span>  </span><br><span class="line">put_cpu_var(percpu_ptr);    <span class="comment">//开启内核抢断</span></span><br></pre></td></tr></table></figure></p>
+<h3 id="分配内存函数的选择"><a href="#分配内存函数的选择" class="headerlink" title="分配内存函数的选择"></a>分配内存函数的选择</h3><table>
+<thead>
+<tr>
+<th>需求</th>
+<th>函数</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>连续的物理页</td>
+<td>kmalloc()</td>
+<td>可以通过 flag 决定是否可以睡眠，</td>
+</tr>
+<tr>
+<td>高端内存</td>
+<td>alloc_pages()</td>
+<td>返回一个 page 的指针，而不是逻辑地址，因为可能没有映射</td>
+</tr>
+<tr>
+<td>获取真正的指针</td>
+<td>kmap()</td>
+<td>会把高端内存映射到逻辑地址</td>
+</tr>
+<tr>
+<td>不需要内存连续的地址</td>
+<td>vmalloc()</td>
+<td>需要映射，有性能损失</td>
+</tr>
+<tr>
+<td>创建和撤销数据结构</td>
+<td>slab</td>
+<td>使用 cache 动态分配</td>
+</tr>
+</tbody>
+</table>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/kernel/" rel="tag"><i class="fa fa-tag"></i> kernel</a>
+          
+            <a href="/tags/memory/" rel="tag"><i class="fa fa-tag"></i> memory</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/09/11/11-XFS-quotacheck源码/" rel="next" title="XFS-quotacheck源码">
+                <i class="fa fa-chevron-left"></i> XFS-quotacheck源码
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/09/20/13-进程地址空间/" rel="prev" title="进程地址空间">
+                进程地址空间 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/icon.jpg" alt="Tomoku">
+            
+              <p class="site-author-name" itemprop="name">Tomoku</p>
+              <div class="site-description motion-element" itemprop="description">勿忘初心</div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">13</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  
+                    
+                      <a href="/tags/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">12</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+            <div class="links-of-author motion-element">
+              
+                <span class="links-of-author-item">
+                  
+                  
+                    
+                  
+                  
+                    
+                  
+                  <a href="https://github.com/Tomoku-dm" title="GitHub &rarr; https://github.com/Tomoku-dm" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+                </span>
+              
+                <span class="links-of-author-item">
+                  
+                  
+                    
+                  
+                  
+                    
+                  
+                  <a href="/dm990107744@gmail.com" title="E-Mail &rarr; dm990107744@gmail.com"><i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                </span>
+              
+            </div>
+          
+
+          
+
+          
+          
+
+          
+            
+          
+	 <iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width="298" height="52" src="//music.163.com/outchain/player?type=2&id=409650927&auto=0&height=32"></iframe>
+	  
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#内存页"><span class="nav-number">1.</span> <span class="nav-text">内存页</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#page-的内核代码"><span class="nav-number">1.1.</span> <span class="nav-text">page 的内核代码</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ZONE"><span class="nav-number">2.</span> <span class="nav-text">ZONE</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#zone-的内核代码"><span class="nav-number">2.1.</span> <span class="nav-text">zone 的内核代码</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#获取页"><span class="nav-number">3.</span> <span class="nav-text">获取页</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#kmalloc"><span class="nav-number">3.1.</span> <span class="nav-text">kmalloc()</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#gfp-mask-标志"><span class="nav-number">3.1.1.</span> <span class="nav-text">gfp_mask 标志</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#kfree"><span class="nav-number">3.1.2.</span> <span class="nav-text">kfree()</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#vmalloc"><span class="nav-number">3.2.</span> <span class="nav-text">vmalloc()</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Slab-层"><span class="nav-number">4.</span> <span class="nav-text">Slab 层</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#task-struct-对象的-slab-和-cache-创建例子"><span class="nav-number">4.1.</span> <span class="nav-text">task_struct 对象的 slab 和 cache 创建例子</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#其他"><span class="nav-number">5.</span> <span class="nav-text">其他</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Stack-上内存的静态分配"><span class="nav-number">5.1.</span> <span class="nav-text">Stack 上内存的静态分配</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#高端内存的映射"><span class="nav-number">5.2.</span> <span class="nav-text">高端内存的映射</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#per-CPU-新接口"><span class="nav-number">5.3.</span> <span class="nav-text">per CPU 新接口</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#分配内存函数的选择"><span class="nav-number">6.</span> <span class="nav-text">分配内存函数的选择</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Tomoku</span>
+
+  
+
+  
+</div>
+<!--
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.1.0</div>
+
+
+
+
+-->
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/utils.js?v=7.1.0"></script>
+
+  <script src="/js/motion.js?v=7.1.0"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/affix.js?v=7.1.0"></script>
+
+  <script src="/js/schemes/pisces.js?v=7.1.0"></script>
+
+
+
+
+  
+  <script src="/js/scrollspy.js?v=7.1.0"></script>
+<script src="/js/post-details.js?v=7.1.0"></script>
+
+
+
+  
+
+
+  <script src="/js/next-boot.js?v=7.1.0"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
