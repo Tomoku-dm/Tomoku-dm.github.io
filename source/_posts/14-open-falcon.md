@@ -8,7 +8,7 @@ tags:
 
 ## 一、前言
 
-新入职的公司用小米开发的 [open-falcon](https://github.com/open-falcon/falcon-plus)来做监控，所以今天来学一下，相比于主流的 `zabbix`  open-falcon 不需要用户在server做任何配置，只要安装了falcon-agent的机器，就会自动开始采集各项指标，主动上报。这种方式用户维护方便，覆盖率高。当然这样做也会server端造成较大的压力。
+新入职的公司用小米开发的 [open-falcon](https://github.com/open-falcon/falcon-plus)来做监控，所以今天来学一下，相比于主流的 `zabbix` ，添加客户端时，open-falcon 不需要用户在server做任何配置，只要安装了falcon-agent的机器，就会自动开始采集各项指标，主动上报。这种方式用户维护方便，覆盖率高。当然这样做也会 server 端造成较大的压力。
 
 ## 二、open-falcon 特点
 
@@ -80,7 +80,7 @@ dashboard首页，用户可以以多个维度来搜索endpoint列表，即可以
 open-falcon 把数据按照用途分成两类，一类是用来绘图的，一类是用户做数据挖掘的。open-falcon 在数据每次存入的时候，会自动进行采样、归档。历史数据保存5年,同时为了不丢失信息量，数据归档的时候，会按照平均值采样、最大值采样、最小值采样存三份。
 
 
-## 三、open-falcon 部署
+## 三、Open-falcon 部署
 
 ### 1.Server 后端安装
 
@@ -286,6 +286,20 @@ agent 需要部署到所有要被监控的机器上，比如公司有10万台机
 
 如何确定数据是否正常收集： [数据收集相关问题](http://book.open-falcon.com/zh/faq/collect.html)
 
+> 如何验证[绘图数据]收集是否正常:  
+> 数据链路是：agent->transfer->graph->query->dashboard。graph有一个http接口可以验证agent->transfer->graph这条链路，比如graph的http端口是6071，可以这么访问验证：  
+> 
+> curl http://127.0.0.1:6071/history/$endpoint/$counter  
+> $endpoint和$counter是变量  
+
+> 如何验证[报警数据]收集是否正常:  
+> 数据链路是：agent->transfer->judge，judge有一个http接口可以验证agent->transfer->judge这条链路，比如judge的http端口是6081，可以这么访问验证：    
+> 
+> curl http://127.0.0.1:6081/history/$endpoint/$counter   
+> $endpoint和$counter是变量  
+
+如果调用上述接口返回空值，则说明agent没有上报数据、或者transfer服务异常。
+
 **相关日志文件:**
 
 server：
@@ -298,16 +312,20 @@ agent:
 
 ## 五、添加监控
 
-1.创建 HostGroup 右上角编辑名字点击添加，在hostgroup 中添加 hosts
+1.创建 HostGroup 右上角编辑名字点击添加，在hostgroup 中添加 hosts。
 
+**如下图：**
 ![hostgroup](https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/14-hostgroup.png)
 
 
 2.创建一个模板,在 condition 中设置规则
 
+**如下图：**
 ![template](https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/14-template.png)
 
-策略中 all(#3) 中的3 代表的是最新的三个点。该数字默认不能大于10，大于10将当作10处理，即只计算最新10个点的值。
+> 如果是自定义的 push 的metric 可能搜索不到，直接写就可以 
+
+策略中 all(#3) 中的3代表的是最新的三个点。该数字默认不能大于10，大于10将当作10处理，即只计算最新10个点的值。
 
 all 是函数策略：
 
@@ -323,8 +341,9 @@ lookup(#2,3): 最新的3个点中有2个满足条件则报警；
 stddev(#7) = 3：离群点检测函数，取最新 **7** 个点的数据分别计算得到他们的标准差和均值，分别计为 σ 和 μ，其中当前值计为 X，那么当 X 落在区间 [μ-3σ, μ+3σ] 之外时，则认为当前值波动过大，触发报警；更多请参考3-sigma算法：https://en.wikipedia.org/wiki/68%E2%80%9395%E2%80%9399.7_rule。
 ```
 
-3.HostGroup 模块中绑定模板到 HostGroup 上，配置完成后，如发生报警，可在 Alarm-Dashboard 看到。
+3. HostGroup 模块中绑定模板到 HostGroup 上，配置完成后，如发生报警，可在 Alarm-Dashboard 看到。
 
+**如下图：**
 ![alarm](https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/14-alarm.PNG)
 
 
@@ -335,6 +354,21 @@ stddev(#7) = 3：离群点检测函数，取最新 **7** 个点的数据分别�
 # 注意，http request body是个json，这个json是个列表
 ts=`date +%s`;
 curl -X POST -d "[{\"metric\": \"test-metric\", \"endpoint\": \"test-endpoint\", \"timestamp\": $ts,\"step\": 60,\"value\": 1,\"counterType\": \"GAUGE\",\"tags\": \"idc=lg,project=xx\"}]" http://127.0.0.1:1988/v1/push
+```
+
+例：从 proc 拿数据 push 到server
+```shell
+[root@centos69 scripts]# sh active_memory.sh
+success
+
+[root@centos69 scripts]# cat active_memory.sh 
+#!/bin/bash
+ts=`date +%s`;
+value=`cat /proc/meminfo |grep Active: |awk '{print $2}'`
+curl -X POST -d "[{\"metric\": \"mem.active\", \"endpoint\": \"centos69\", \"timestamp\": $ts,\"step\": 60,\"value\": $value,\"counterType\": \"GAUGE\",\"tags\": \"loc=hefei\"}]" http://127.0.0.1:1988/v1/push
+
+[root@centos69 scripts]# cat /etc/crontab 
+*/1  *  *  *  * root sh /root/software/scripts/active_memory.sh
 ```
 
 ### 2.python 模板
@@ -379,8 +413,8 @@ print r.text
 - value: 代表该metric在当前时间点的值，float64
 - step: 表示该数据采集项的汇报周期，这对于后续的配置监控策略很重要，必须明确指定。
 - counterType: 只能是COUNTER或者GAUGE二选一，前者表示该数据采集项为计时器类型，后者表示其为原值 (注意大小写)
-- GAUGE：即用户上传什么样的值，就原封不动的存储
-- COUNTER：指标在存储和展现的时候，会被计算为speed，即（当前值 - 上次值）/ 时间间隔
+  - GAUGE：即用户上传什么样的值，就原封不动的存储
+  - COUNTER：指标在存储和展现的时候，会被计算为speed，即（当前值 - 上次值）/ 时间间隔
 - tags: 一组逗号分割的键值对, 对metric进一步描述和细化, 可以是空字符串. 比如idc=lg，比如service=xbox等，多个tag之间用逗号分割
 
 上述7个字段是必须的。
