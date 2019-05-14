@@ -96,23 +96,23 @@
 
 
 
-  <meta name="description" content="一、前言新入职的公司用小米开发的 open-falcon来做监控，所以今天来学一下，相比于主流的 zabbix  open-falcon 不需要用户在server做任何配置，只要安装了falcon-agent的机器，就会自动开始采集各项指标，主动上报。这种方式用户维护方便，覆盖率高。当然这样做也会server端造成较大的压力。 二、open-falcon 特点1.架构模块open-falcon 的">
+  <meta name="description" content="一、前言新入职的公司用小米开发的 open-falcon来做监控，所以今天来学一下，相比于主流的 zabbix ，添加客户端时，open-falcon 不需要用户在server做任何配置，只要安装了falcon-agent的机器，就会自动开始采集各项指标，主动上报。这种方式用户维护方便，覆盖率高。当然这样做也会 server 端造成较大的压力。 二、open-falcon 特点1.架构模块open">
 <meta name="keywords" content="linux,debug">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Open-falcon 部署">
 <meta property="og:url" content="http://yoursite.com/2019/05/14/14-open-falcon/index.html">
 <meta property="og:site_name" content="Tomoku&#39;s blog">
-<meta property="og:description" content="一、前言新入职的公司用小米开发的 open-falcon来做监控，所以今天来学一下，相比于主流的 zabbix  open-falcon 不需要用户在server做任何配置，只要安装了falcon-agent的机器，就会自动开始采集各项指标，主动上报。这种方式用户维护方便，覆盖率高。当然这样做也会server端造成较大的压力。 二、open-falcon 特点1.架构模块open-falcon 的">
+<meta property="og:description" content="一、前言新入职的公司用小米开发的 open-falcon来做监控，所以今天来学一下，相比于主流的 zabbix ，添加客户端时，open-falcon 不需要用户在server做任何配置，只要安装了falcon-agent的机器，就会自动开始采集各项指标，主动上报。这种方式用户维护方便，覆盖率高。当然这样做也会 server 端造成较大的压力。 二、open-falcon 特点1.架构模块open">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/14-Architecture.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/14-dashboard.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/14-hostgroup.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/14-template.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/14-alarm.PNG">
-<meta property="og:updated_time" content="2019-05-14T13:51:01.446Z">
+<meta property="og:updated_time" content="2019-05-14T19:37:07.009Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Open-falcon 部署">
-<meta name="twitter:description" content="一、前言新入职的公司用小米开发的 open-falcon来做监控，所以今天来学一下，相比于主流的 zabbix  open-falcon 不需要用户在server做任何配置，只要安装了falcon-agent的机器，就会自动开始采集各项指标，主动上报。这种方式用户维护方便，覆盖率高。当然这样做也会server端造成较大的压力。 二、open-falcon 特点1.架构模块open-falcon 的">
+<meta name="twitter:description" content="一、前言新入职的公司用小米开发的 open-falcon来做监控，所以今天来学一下，相比于主流的 zabbix ，添加客户端时，open-falcon 不需要用户在server做任何配置，只要安装了falcon-agent的机器，就会自动开始采集各项指标，主动上报。这种方式用户维护方便，覆盖率高。当然这样做也会 server 端造成较大的压力。 二、open-falcon 特点1.架构模块open">
 <meta name="twitter:image" content="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/14-Architecture.png">
 
 
@@ -360,12 +360,24 @@
                 
               
 
-              <time title="创建时间：2019-05-14 19:47:08 / 修改时间：21:51:01" itemprop="dateCreated datePublished" datetime="2019-05-14T19:47:08+08:00">2019-05-14</time>
+              <time title="创建时间：2019-05-14 19:47:08" itemprop="dateCreated datePublished" datetime="2019-05-14T19:47:08+08:00">2019-05-14</time>
             
 
             
               
 
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-05-15 03:37:07" itemprop="dateModified" datetime="2019-05-15T03:37:07+08:00">2019-05-15</time>
               
             
           </span>
@@ -399,7 +411,7 @@
       
 
       
-        <h2 id="一、前言"><a href="#一、前言" class="headerlink" title="一、前言"></a>一、前言</h2><p>新入职的公司用小米开发的 <a href="https://github.com/open-falcon/falcon-plus" target="_blank" rel="noopener">open-falcon</a>来做监控，所以今天来学一下，相比于主流的 <code>zabbix</code>  open-falcon 不需要用户在server做任何配置，只要安装了falcon-agent的机器，就会自动开始采集各项指标，主动上报。这种方式用户维护方便，覆盖率高。当然这样做也会server端造成较大的压力。</p>
+        <h2 id="一、前言"><a href="#一、前言" class="headerlink" title="一、前言"></a>一、前言</h2><p>新入职的公司用小米开发的 <a href="https://github.com/open-falcon/falcon-plus" target="_blank" rel="noopener">open-falcon</a>来做监控，所以今天来学一下，相比于主流的 <code>zabbix</code> ，添加客户端时，open-falcon 不需要用户在server做任何配置，只要安装了falcon-agent的机器，就会自动开始采集各项指标，主动上报。这种方式用户维护方便，覆盖率高。当然这样做也会 server 端造成较大的压力。</p>
 <h2 id="二、open-falcon-特点"><a href="#二、open-falcon-特点" class="headerlink" title="二、open-falcon 特点"></a>二、open-falcon 特点</h2><h3 id="1-架构模块"><a href="#1-架构模块" class="headerlink" title="1.架构模块"></a>1.架构模块</h3><p>open-falcon 的主要结构模块如下图:<br><img src="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/14-Architecture.png" alt="Architecture"></p>
 <p>每台服务器，都有安装falcon-agent，falcon-agent是一个golang开发的daemon程序，用于自发现的采集单机的各种数据和指标，这些指标包括不限于以下几个方面，共计200多项指标。</p>
 <ul>
@@ -434,7 +446,7 @@
 <li>高效率的读: 虽然读数据操作相对较少，但是需要高效率的读，一般会一次性查询上百个metric</li>
 </ul>
 <p>open-falcon 把数据按照用途分成两类，一类是用来绘图的，一类是用户做数据挖掘的。open-falcon 在数据每次存入的时候，会自动进行采样、归档。历史数据保存5年,同时为了不丢失信息量，数据归档的时候，会按照平均值采样、最大值采样、最小值采样存三份。</p>
-<h2 id="三、open-falcon-部署"><a href="#三、open-falcon-部署" class="headerlink" title="三、open-falcon 部署"></a>三、open-falcon 部署</h2><h3 id="1-Server-后端安装"><a href="#1-Server-后端安装" class="headerlink" title="1.Server 后端安装"></a>1.Server 后端安装</h3><h4 id="go-环境部署"><a href="#go-环境部署" class="headerlink" title="go 环境部署"></a>go 环境部署</h4><ol>
+<h2 id="三、Open-falcon-部署"><a href="#三、Open-falcon-部署" class="headerlink" title="三、Open-falcon 部署"></a>三、Open-falcon 部署</h2><h3 id="1-Server-后端安装"><a href="#1-Server-后端安装" class="headerlink" title="1.Server 后端安装"></a>1.Server 后端安装</h3><h4 id="go-环境部署"><a href="#go-环境部署" class="headerlink" title="go 环境部署"></a>go 环境部署</h4><ol>
 <li>下载 <a href="https://golang.org" target="_blank" rel="noopener">go</a> 编译好的tar 包，<a href="https://golang.org/dl" target="_blank" rel="noopener">https://golang.org/dl</a> , 有可能会被墙</li>
 <li><p>创建工作目录并解压下载好的 tar 包</p>
  <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> mkdir /software</span><br><span class="line"><span class="meta">$</span> mkdir gopath   &amp; cd  gopath  &amp; mkdir  src pkg bin       # go 语言特性，需要这个目录</span><br><span class="line"><span class="meta">$</span> cd /software &amp; tar -zxvf go1.9.linux-amd64.tar.gz       # 会解压出 go 目录</span><br></pre></td></tr></table></figure>
@@ -494,6 +506,15 @@
 </li>
 </ol>
 <h2 id="四、安装问题排查"><a href="#四、安装问题排查" class="headerlink" title="四、安装问题排查"></a>四、安装问题排查</h2><p>如何确定数据是否正常收集： <a href="http://book.open-falcon.com/zh/faq/collect.html" target="_blank" rel="noopener">数据收集相关问题</a></p>
+<blockquote>
+<p>如何验证[绘图数据]收集是否正常:<br>数据链路是：agent-&gt;transfer-&gt;graph-&gt;query-&gt;dashboard。graph有一个http接口可以验证agent-&gt;transfer-&gt;graph这条链路，比如graph的http端口是6071，可以这么访问验证：  </p>
+<p>curl <a href="http://127.0.0.1:6071/history/$endpoint/$counter" target="_blank" rel="noopener">http://127.0.0.1:6071/history/$endpoint/$counter</a><br>$endpoint和$counter是变量  </p>
+</blockquote>
+<blockquote>
+<p>如何验证[报警数据]收集是否正常:<br>数据链路是：agent-&gt;transfer-&gt;judge，judge有一个http接口可以验证agent-&gt;transfer-&gt;judge这条链路，比如judge的http端口是6081，可以这么访问验证：    </p>
+<p>curl <a href="http://127.0.0.1:6081/history/$endpoint/$counter" target="_blank" rel="noopener">http://127.0.0.1:6081/history/$endpoint/$counter</a><br>$endpoint和$counter是变量  </p>
+</blockquote>
+<p>如果调用上述接口返回空值，则说明agent没有上报数据、或者transfer服务异常。</p>
 <p><strong>相关日志文件:</strong></p>
 <p>server：</p>
 <ul>
@@ -503,16 +524,22 @@
 <ul>
 <li>agent/logs/agent.log</li>
 </ul>
-<h2 id="五、添加监控"><a href="#五、添加监控" class="headerlink" title="五、添加监控"></a>五、添加监控</h2><p>1.创建 HostGroup 右上角编辑名字点击添加，在hostgroup 中添加 hosts</p>
-<p><img src="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/14-hostgroup.png" alt="hostgroup"></p>
+<h2 id="五、添加监控"><a href="#五、添加监控" class="headerlink" title="五、添加监控"></a>五、添加监控</h2><p>1.创建 HostGroup 右上角编辑名字点击添加，在hostgroup 中添加 hosts。</p>
+<p><strong>如下图：</strong><br><img src="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/14-hostgroup.png" alt="hostgroup"></p>
 <p>2.创建一个模板,在 condition 中设置规则</p>
-<p><img src="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/14-template.png" alt="template"></p>
-<p>策略中 all(#3) 中的3 代表的是最新的三个点。该数字默认不能大于10，大于10将当作10处理，即只计算最新10个点的值。</p>
+<p><strong>如下图：</strong><br><img src="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/14-template.png" alt="template"></p>
+<blockquote>
+<p>如果是自定义的 push 的metric 可能搜索不到，直接写就可以 </p>
+</blockquote>
+<p>策略中 all(#3) 中的3代表的是最新的三个点。该数字默认不能大于10，大于10将当作10处理，即只计算最新10个点的值。</p>
 <p>all 是函数策略：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">all(#3): 最新的3个点都满足阈值条件则报警</span><br><span class="line">max(#3): 对于最新的3个点，其最大值满足阈值条件则报警</span><br><span class="line">min(#3): 对于最新的3个点，其最小值满足阈值条件则报警</span><br><span class="line">sum(#3): 对于最新的3个点，其和满足阈值条件则报警</span><br><span class="line">avg(#3): 对于最新的3个点，其平均值满足阈值条件则报警</span><br><span class="line">diff(#3): 拿最新push上来的点（被减数），与历史最新的3个点（3个减数）相减，得到3个差，只要有一个差满足阈值条件则报警</span><br><span class="line">pdiff(#3): 拿最新push上来的点，与历史最新的3个点相减，得到3个差，再将3个差值分别除以减数，得到3个商值，只要有一个商值满足阈值则报警</span><br><span class="line">lookup(#2,3): 最新的3个点中有2个满足条件则报警；</span><br><span class="line">stddev(#7) = 3：离群点检测函数，取最新 **7** 个点的数据分别计算得到他们的标准差和均值，分别计为 σ 和 μ，其中当前值计为 X，那么当 X 落在区间 [μ-3σ, μ+3σ] 之外时，则认为当前值波动过大，触发报警；更多请参考3-sigma算法：https://en.wikipedia.org/wiki/68%E2%80%9395%E2%80%9399.7_rule。</span><br></pre></td></tr></table></figure>
-<p>3.HostGroup 模块中绑定模板到 HostGroup 上，配置完成后，如发生报警，可在 Alarm-Dashboard 看到。</p>
-<p><img src="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/14-alarm.PNG" alt="alarm"></p>
+<ol start="3">
+<li>HostGroup 模块中绑定模板到 HostGroup 上，配置完成后，如发生报警，可在 Alarm-Dashboard 看到。</li>
+</ol>
+<p><strong>如下图：</strong><br><img src="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/14-alarm.PNG" alt="alarm"></p>
 <h2 id="六、自定义-push-数据"><a href="#六、自定义-push-数据" class="headerlink" title="六、自定义 push 数据"></a>六、自定义 push 数据</h2><h3 id="1-shell-模板"><a href="#1-shell-模板" class="headerlink" title="1.shell 模板"></a>1.shell 模板</h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 注意，http request body是个json，这个json是个列表</span><br><span class="line">ts=`date +%s`;</span><br><span class="line">curl -X POST -d "[&#123;\"metric\": \"test-metric\", \"endpoint\": \"test-endpoint\", \"timestamp\": $ts,\"step\": 60,\"value\": 1,\"counterType\": \"GAUGE\",\"tags\": \"idc=lg,project=xx\"&#125;]" http://127.0.0.1:1988/v1/push</span><br></pre></td></tr></table></figure>
+<p>例：从 proc 拿数据 push 到server<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">[root@centos69 scripts]# sh active_memory.sh</span><br><span class="line">success</span><br><span class="line"></span><br><span class="line">[root@centos69 scripts]# cat active_memory.sh </span><br><span class="line"><span class="meta">#</span>!/bin/bash</span><br><span class="line">ts=`date +%s`;</span><br><span class="line">value=`cat /proc/meminfo |grep Active: |awk '&#123;print $2&#125;'`</span><br><span class="line">curl -X POST -d "[&#123;\"metric\": \"mem.active\", \"endpoint\": \"centos69\", \"timestamp\": $ts,\"step\": 60,\"value\": $value,\"counterType\": \"GAUGE\",\"tags\": \"loc=hefei\"&#125;]" http://127.0.0.1:1988/v1/push</span><br><span class="line"></span><br><span class="line">[root@centos69 scripts]# cat /etc/crontab </span><br><span class="line">*/1  *  *  *  * root sh /root/software/scripts/active_memory.sh</span><br></pre></td></tr></table></figure></p>
 <h3 id="2-python-模板"><a href="#2-python-模板" class="headerlink" title="2.python 模板"></a>2.python 模板</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!-*- coding:utf8 -*-</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">import</span> time</span><br><span class="line"><span class="keyword">import</span> json</span><br><span class="line"></span><br><span class="line">ts = int(time.time())</span><br><span class="line">payload = [</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">"endpoint"</span>: <span class="string">"test-endpoint"</span>,</span><br><span class="line">        <span class="string">"metric"</span>: <span class="string">"test-metric"</span>,</span><br><span class="line">        <span class="string">"timestamp"</span>: ts,</span><br><span class="line">        <span class="string">"step"</span>: <span class="number">60</span>,</span><br><span class="line">        <span class="string">"value"</span>: <span class="number">1</span>,</span><br><span class="line">        <span class="string">"counterType"</span>: <span class="string">"GAUGE"</span>,</span><br><span class="line">        <span class="string">"tags"</span>: <span class="string">"idc=lg,loc=beijing"</span>,</span><br><span class="line">    &#125;,</span><br><span class="line"></span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">"endpoint"</span>: <span class="string">"test-endpoint"</span>,</span><br><span class="line">        <span class="string">"metric"</span>: <span class="string">"test-metric2"</span>,</span><br><span class="line">        <span class="string">"timestamp"</span>: ts,</span><br><span class="line">        <span class="string">"step"</span>: <span class="number">60</span>,</span><br><span class="line">        <span class="string">"value"</span>: <span class="number">2</span>,</span><br><span class="line">        <span class="string">"counterType"</span>: <span class="string">"GAUGE"</span>,</span><br><span class="line">        <span class="string">"tags"</span>: <span class="string">"idc=lg,loc=beijing"</span>,</span><br><span class="line">    &#125;,</span><br><span class="line">]</span><br><span class="line"></span><br><span class="line">r = requests.post(<span class="string">"http://127.0.0.1:1988/v1/push"</span>, data=json.dumps(payload))</span><br><span class="line"></span><br><span class="line"><span class="keyword">print</span> r.text</span><br></pre></td></tr></table></figure>
 <h3 id="3-API-详解"><a href="#3-API-详解" class="headerlink" title="3.API 详解"></a>3.API 详解</h3><ul>
 <li>metric: 最核心的字段，代表这个采集项具体度量的是什么, 比如是cpu_idle呢，还是memory_free, 还是qps</li>
@@ -520,9 +547,11 @@
 <li>timestamp: 表示汇报该数据时的unix时间戳，注意是整数，代表的是秒</li>
 <li>value: 代表该metric在当前时间点的值，float64</li>
 <li>step: 表示该数据采集项的汇报周期，这对于后续的配置监控策略很重要，必须明确指定。</li>
-<li>counterType: 只能是COUNTER或者GAUGE二选一，前者表示该数据采集项为计时器类型，后者表示其为原值 (注意大小写)</li>
+<li>counterType: 只能是COUNTER或者GAUGE二选一，前者表示该数据采集项为计时器类型，后者表示其为原值 (注意大小写)<ul>
 <li>GAUGE：即用户上传什么样的值，就原封不动的存储</li>
 <li>COUNTER：指标在存储和展现的时候，会被计算为speed，即（当前值 - 上次值）/ 时间间隔</li>
+</ul>
+</li>
 <li>tags: 一组逗号分割的键值对, 对metric进一步描述和细化, 可以是空字符串. 比如idc=lg，比如service=xbox等，多个tag之间用逗号分割</li>
 </ul>
 <p>上述7个字段是必须的。</p>
@@ -771,7 +800,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#一、前言"><span class="nav-number">1.</span> <span class="nav-text">一、前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#二、open-falcon-特点"><span class="nav-number">2.</span> <span class="nav-text">二、open-falcon 特点</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-架构模块"><span class="nav-number">2.1.</span> <span class="nav-text">1.架构模块</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-数据模型"><span class="nav-number">2.2.</span> <span class="nav-text">2.数据模型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-数据收集"><span class="nav-number">2.3.</span> <span class="nav-text">3.数据收集</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-Dashboard"><span class="nav-number">2.4.</span> <span class="nav-text">4.Dashboard</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-存储"><span class="nav-number">2.5.</span> <span class="nav-text">5.存储</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#三、open-falcon-部署"><span class="nav-number">3.</span> <span class="nav-text">三、open-falcon 部署</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-Server-后端安装"><span class="nav-number">3.1.</span> <span class="nav-text">1.Server 后端安装</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#go-环境部署"><span class="nav-number">3.1.1.</span> <span class="nav-text">go 环境部署</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#mysql-数据库、redis-部署"><span class="nav-number">3.1.2.</span> <span class="nav-text">mysql 数据库、redis 部署</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#安装-open-falcon-包"><span class="nav-number">3.1.3.</span> <span class="nav-text">安装 open-falcon  包</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-Server-前端-Dashboard-安装"><span class="nav-number">3.2.</span> <span class="nav-text">2.Server 前端 Dashboard 安装</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-agent-安装"><span class="nav-number">3.3.</span> <span class="nav-text">3.agent 安装</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#四、安装问题排查"><span class="nav-number">4.</span> <span class="nav-text">四、安装问题排查</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#五、添加监控"><span class="nav-number">5.</span> <span class="nav-text">五、添加监控</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#六、自定义-push-数据"><span class="nav-number">6.</span> <span class="nav-text">六、自定义 push 数据</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-shell-模板"><span class="nav-number">6.1.</span> <span class="nav-text">1.shell 模板</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-python-模板"><span class="nav-number">6.2.</span> <span class="nav-text">2.python 模板</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-API-详解"><span class="nav-number">6.3.</span> <span class="nav-text">3.API 详解</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#七、参考链接"><span class="nav-number">7.</span> <span class="nav-text">七、参考链接</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#一、前言"><span class="nav-number">1.</span> <span class="nav-text">一、前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#二、open-falcon-特点"><span class="nav-number">2.</span> <span class="nav-text">二、open-falcon 特点</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-架构模块"><span class="nav-number">2.1.</span> <span class="nav-text">1.架构模块</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-数据模型"><span class="nav-number">2.2.</span> <span class="nav-text">2.数据模型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-数据收集"><span class="nav-number">2.3.</span> <span class="nav-text">3.数据收集</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-Dashboard"><span class="nav-number">2.4.</span> <span class="nav-text">4.Dashboard</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-存储"><span class="nav-number">2.5.</span> <span class="nav-text">5.存储</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#三、Open-falcon-部署"><span class="nav-number">3.</span> <span class="nav-text">三、Open-falcon 部署</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-Server-后端安装"><span class="nav-number">3.1.</span> <span class="nav-text">1.Server 后端安装</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#go-环境部署"><span class="nav-number">3.1.1.</span> <span class="nav-text">go 环境部署</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#mysql-数据库、redis-部署"><span class="nav-number">3.1.2.</span> <span class="nav-text">mysql 数据库、redis 部署</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#安装-open-falcon-包"><span class="nav-number">3.1.3.</span> <span class="nav-text">安装 open-falcon  包</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-Server-前端-Dashboard-安装"><span class="nav-number">3.2.</span> <span class="nav-text">2.Server 前端 Dashboard 安装</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-agent-安装"><span class="nav-number">3.3.</span> <span class="nav-text">3.agent 安装</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#四、安装问题排查"><span class="nav-number">4.</span> <span class="nav-text">四、安装问题排查</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#五、添加监控"><span class="nav-number">5.</span> <span class="nav-text">五、添加监控</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#六、自定义-push-数据"><span class="nav-number">6.</span> <span class="nav-text">六、自定义 push 数据</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-shell-模板"><span class="nav-number">6.1.</span> <span class="nav-text">1.shell 模板</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-python-模板"><span class="nav-number">6.2.</span> <span class="nav-text">2.python 模板</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-API-详解"><span class="nav-number">6.3.</span> <span class="nav-text">3.API 详解</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#七、参考链接"><span class="nav-number">7.</span> <span class="nav-text">七、参考链接</span></a></li></ol></div>
             
 
           </div>
