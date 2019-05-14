@@ -97,6 +97,7 @@
 
 
   <meta name="description" content="前言关于 Linux 内存管理方面一些文章和书籍中都使用大量的篇幅去讲解，本篇文章主要从进程如何使用内存和物理内存如何管理的两个角度出发，去看 linux 系统是如何管理内存的。由于涉及的点比较多，并且本人技术水平有限，一些内容不会讲的太过深入，一些我比较感兴趣的点，我们会在后续文章中进一步学习。 进程如何使用内存进程地址空间所有进程的执行都需要占用一定的内存，那么进程是怎么使用机器上的内存的呢，">
+<meta name="keywords" content="kernel,memory">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Linux 内存分析——进程和物理结构角度">
 <meta property="og:url" content="http://yoursite.com/2019/04/13/1-memory-process-physical/index.html">
@@ -113,7 +114,7 @@
 <meta property="og:image" content="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/1-slab.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/1-process-physical.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/1-systemcall.png">
-<meta property="og:updated_time" content="2019-05-05T14:34:33.423Z">
+<meta property="og:updated_time" content="2019-05-14T11:48:15.803Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Linux 内存分析——进程和物理结构角度">
 <meta name="twitter:description" content="前言关于 Linux 内存管理方面一些文章和书籍中都使用大量的篇幅去讲解，本篇文章主要从进程如何使用内存和物理内存如何管理的两个角度出发，去看 linux 系统是如何管理内存的。由于涉及的点比较多，并且本人技术水平有限，一些内容不会讲的太过深入，一些我比较感兴趣的点，我们会在后续文章中进一步学习。 进程如何使用内存进程地址空间所有进程的执行都需要占用一定的内存，那么进程是怎么使用机器上的内存的呢，">
@@ -381,7 +382,7 @@
                 
                   <span class="post-meta-item-text">更新于</span>
                 
-                <time title="修改时间：2019-05-05 22:34:33" itemprop="dateModified" datetime="2019-05-05T22:34:33+08:00">2019-05-05</time>
+                <time title="修改时间：2019-05-14 19:48:15" itemprop="dateModified" datetime="2019-05-14T19:48:15+08:00">2019-05-14</time>
               
             
           </span>
@@ -609,6 +610,14 @@
 
     <footer class="post-footer">
       
+        <div class="post-tags">
+          
+            <a href="/tags/kernel/" rel="tag"><i class="fa fa-tag"></i> kernel</a>
+          
+            <a href="/tags/memory/" rel="tag"><i class="fa fa-tag"></i> memory</a>
+          
+        </div>
+      
 
       
       
@@ -627,6 +636,10 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/05/14/14-open-falcon/" rel="prev" title="Open-falcon 部署">
+                Open-falcon 部署 <i class="fa fa-chevron-right"></i>
+              </a>
             
           </div>
         </div>
@@ -697,7 +710,7 @@
                 
                   <a href="/archives/">
                 
-                    <span class="site-state-item-count">13</span>
+                    <span class="site-state-item-count">14</span>
                     <span class="site-state-item-name">日志</span>
                   </a>
                 </div>
@@ -740,7 +753,9 @@
                     
                       
                     
-                    <span class="site-state-item-count">12</span>
+                      
+                    
+                    <span class="site-state-item-count">13</span>
                     <span class="site-state-item-name">标签</span>
                   </a>
                 </div>
