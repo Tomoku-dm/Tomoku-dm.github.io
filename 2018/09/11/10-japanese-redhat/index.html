@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.1.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.1.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.1.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.1.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.1.0" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.1.0',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="这是我在 redhat 工作时所用的模板，在这记录一下   开头ご利用ありがとうございます。レッドハットサポートの杜が承(うけたまわ)ります。 今回は技術的な新規のお問い合わせでしょうか？ 确认订阅それでははじめにご契約状況を確認致します。アカウント番号もしくはカスタマーポータルへのログイン ID をお願いします。/を伺ってよろしいでしょうか。   – それでは確認致しますので少々お待ち下さい。">
+<meta name="keywords" content="japanese,redhat">
+<meta property="og:type" content="article">
+<meta property="og:title" content="japanese-redhat">
+<meta property="og:url" content="http://yoursite.com/2018/09/11/10-japanese-redhat/index.html">
+<meta property="og:site_name" content="Tomoku&#39;s blog">
+<meta property="og:description" content="这是我在 redhat 工作时所用的模板，在这记录一下   开头ご利用ありがとうございます。レッドハットサポートの杜が承(うけたまわ)ります。 今回は技術的な新規のお問い合わせでしょうか？ 确认订阅それでははじめにご契約状況を確認致します。アカウント番号もしくはカスタマーポータルへのログイン ID をお願いします。/を伺ってよろしいでしょうか。   – それでは確認致しますので少々お待ち下さい。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-05-05T16:54:09.695Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="japanese-redhat">
+<meta name="twitter:description" content="这是我在 redhat 工作时所用的模板，在这记录一下   开头ご利用ありがとうございます。レッドハットサポートの杜が承(うけたまわ)ります。 今回は技術的な新規のお問い合わせでしょうか？ 确认订阅それでははじめにご契約状況を確認致します。アカウント番号もしくはカスタマーポータルへのログイン ID をお願いします。/を伺ってよろしいでしょうか。   – それでは確認致しますので少々お待ち下さい。">
+
+
+
+
+
+  
+  
+  <link rel="canonical" href="http://yoursite.com/2018/09/11/10-japanese-redhat/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>japanese-redhat | Tomoku's blog</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Tomoku's blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">在学习技术的道路上缓慢爬行</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/09/11/10-japanese-redhat/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Tomoku">
+      <meta itemprop="description" content="勿忘初心">
+      <meta itemprop="image" content="/images/icon.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Tomoku's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">japanese-redhat
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-09-11 00:44:31" itemprop="dateCreated datePublished" datetime="2018-09-11T00:44:31+08:00">2018-09-11</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-05-06 00:54:09" itemprop="dateModified" datetime="2019-05-06T00:54:09+08:00">2019-05-06</time>
+              
+            
+          </span>
+
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>这是我在 redhat 工作时所用的模板，在这记录一下 </p>
+</blockquote>
+<h4 id="开头"><a href="#开头" class="headerlink" title="开头"></a>开头</h4><p>ご利用ありがとうございます。レッドハットサポートの杜が承(うけたまわ)ります。</p>
+<p><strong>今回は技術的な新規のお問い合わせでしょうか？</strong></p>
+<h4 id="确认订阅"><a href="#确认订阅" class="headerlink" title="确认订阅"></a>确认订阅</h4><p>それでははじめにご契約状況を確認致します。アカウント番号もしくはカスタマーポータルへのログイン ID をお願いします。/を伺ってよろしいでしょうか。  </p>
+<p>– それでは確認致しますので少々お待ち下さい。  </p>
+<p>お待たせしました。確認のため、ご登録いただいている会社名と担当者様、およびご質問者様の<strong>お名前</strong>をお願いします。</p>
+<p>– ありがとうございます。ご契約の確認が取れましたので、ご質問を承ります。</p>
+<h5 id="アカウント番号-不对"><a href="#アカウント番号-不对" class="headerlink" title="アカウント番号 不对"></a>アカウント番号 不对</h5><p>お待たせしました。恐れ入りますがお知らせいただいたアカウント番号を確認することができませんでした。今一度アカウント番号を確認させていただけますか？  </p>
+<p>こちらは現在登録されていない番号のようです。恐れ入りますが、他のアカウント番号やログイン ID はございますでしょうか？</p>
+<h6 id="什么是-アカウント番号"><a href="#什么是-アカウント番号" class="headerlink" title="什么是 アカウント番号"></a>什么是 アカウント番号</h6><p>サブスクリプション証書がございましたらコントラクト番号や照会番号といった番号をお知らせいただいても確認が可能ですが、そのような証書はお手元にございませんでしょうか？</p>
+<h5 id="公司名人名不对"><a href="#公司名人名不对" class="headerlink" title="公司名人名不对"></a>公司名人名不对</h5><p>恐れ入りますが、このアカウント番号に登録されている会社名はお客様からご提供な会社名と違いますので、ご登録情報を再度ご確認いただけませんでしょうか。</p>
+<h4 id="转-CS"><a href="#转-CS" class="headerlink" title="转 CS"></a>转 CS</h4><p>そういったお話はオプション 3 番のカスタマーサービスで承っております。カスタマーサービスへ転送いたしますので、 少々お待ちください。</p>
+<h4 id="没听懂"><a href="#没听懂" class="headerlink" title="没听懂"></a>没听懂</h4><p>すみません、よく聞き取れなかったのでもう一度よろしいですか？</p>
+<h4 id="再等待一会"><a href="#再等待一会" class="headerlink" title="再等待一会"></a>再等待一会</h4><p>お待たせしており申し訳ございません。もう少々お待ちください。</p>
+<h4 id="链接"><a href="#链接" class="headerlink" title="链接"></a>链接</h4><p>それでは、xxx方法のドキュメントを公開しておりますので、そちらをご案内させていただいてもよいでしょうか。</p>
+<h5 id="搜索"><a href="#搜索" class="headerlink" title="搜索"></a>搜索</h5><p>カスタマーポータルの右上の検索のアイコン(マーク)をクリックしてください。  </p>
+<p>それでは、いまから 6桁(けた)の数字をお伝えします。”417 183” です。こちらを検索いただくと『Red Hat Subscription-Manager を使用して』から始まる結果が見つかりますので、タイトルをクリックしてください。</p>
+<h5 id="直接给链接"><a href="#直接给链接" class="headerlink" title="直接给链接"></a>直接给链接</h5><p>ナレッジのURLをお伝えしようと思いますがよろしいでしょうか？  </p>
+<p><a href="https://access.redhat.com/solutions/123123" target="_blank" rel="noopener">https://access.redhat.com/solutions/123123</a><br>：クロン　/スラッシュ　. ドット　 拼写スペル      A大文字　a小文字</p>
+<h5 id="没找到链接"><a href="#没找到链接" class="headerlink" title="没找到链接"></a>没找到链接</h5><p>こちらで伺った情報を元にナレッジベースの既知事例を検索いたしましたが、該当するような既知事例は見受けられませ んでした。</p>
+<h5 id="给链接之后"><a href="#给链接之后" class="headerlink" title="给链接之后"></a>给链接之后</h5><p>こちらのドキュメントの解決策のところに、一通りの登録手順の説明がございます。   </p>
+<p><strong>お手数ではございますがこちらの文章をご一読いただいてシステム登録をお試しください。</strong><br>不明な点がありましたら改めてご連絡いただくか、エラー等が発生した場合はケースを起票いただいて出力結果を調査させていただきたいと思いますがよろしいでしょうか。</p>
+<h5 id="语言切换"><a href="#语言切换" class="headerlink" title="语言切换"></a>语言切换</h5><p>今カスタマーポータルの画面は日本語で表示されていますでしょうか。もしくは英語でしょうか。<br>お客様の画面は今英語でしょうか、それとも日本語でしょうか。</p>
+<h4 id="开-case"><a href="#开-case" class="headerlink" title="开 case"></a>开 case</h4><p>お電話での解決が難しい問題かと思いますので、サポートケースの作成をお願いできますでしょうか。 </p>
+<p> そうしますと、恐れ入りますが、お電話でのご案内が難しい内容で、現在は操作ができない状況、ログなどいろいろ確認させていただく必要が考えられます。</p>
+<p>類似のメッセージや問題は、確かに、弊社ナレッジにも御座います。しかしながら、お客様環境にて発生している事象が、全く同じ原因なのかを、電話で判断する事は出来ません。従いまして、<strong>資料を元に正しく確認をさせて</strong>頂いてもよいでしょうか。</p>
+<h5 id="什么是-case"><a href="#什么是-case" class="headerlink" title="什么是 case"></a>什么是 case</h5><p>ケースは、何らかの問題が発生している場合、または発生している内容に関しての技術的なサポートを弊社のカスタマーポータルを介してお客様とやり取りする為の、Web UI のツールでございます。  </p>
+<p>ケースを作成して頂きますと、担当した弊社エンジニアとのやり取りを開始する事が可能となり、弊社からお客様に対して技術的なサポートを御提供する事が可能となります。電話等では、詳細な技術サポートを提供する事は難しい場合もあり、また、お互いに認識の違いが発生しやすいことも考えられます。この様な事を避ける意味でも、ケースをご利用いただく事をお願いしております。</p>
+<h5 id="怎么开-case"><a href="#怎么开-case" class="headerlink" title="怎么开 case"></a>怎么开 case</h5><p>今弊社のカスタマーポータルにログインされておりますでしょうか。 </p>
+<p>カスタマーポータルの左上に「サポートケースを管理」というリンク(link)がございますので、そちらをクリックしてください。</p>
+<p>そうしますと、画面右側に「サポートケースを作成する」という青いボタンが出てきますのでそちらをクリックしてください。</p>
+<p>サポートケースの作成画面が表示されましたら、ご質問内容や製品のバージョンなどの情報を入力いただき「送信する」のボタンをクリックいただければ、担当者が調査を行ったうえでご連絡いたします。</p>
+<h4 id="sosreport"><a href="#sosreport" class="headerlink" title="sosreport"></a>sosreport</h4><p>sosreport とは、システムから設定と診断情報を取得するツールです。たとえば、実行しているカーネルのバージョン、ロードしたモジュール、そしてシステムおよびサービスの設定ファイルを取得します。  </p>
+<p>sosreport を実行するには、sos パッケージがインストールされている必要があります。パッケージはデフォルトグループに含まれており、意図的に除外しない限りシステムには自動的にインストールされます。  </p>
+<p>sosreport コマンドが完了すると、/tmp (RHEL6 以前) または /var/tmp (RHEL7 以降) の下に圧縮ファイルが生成されます。バージョンが異なると使用する圧縮スキームが異なります (gz、bz2、または xz)。作成されたファイルを (通常はケースに添付して) サポートチームにご提供ください。</p>
+<h4 id="催-case"><a href="#催-case" class="headerlink" title="催 case"></a>催 case</h4><h4 id="开了-CASE"><a href="#开了-CASE" class="headerlink" title="开了 CASE"></a>开了 CASE</h4><p>確認のために、ケース番号を伺ってよろしいでしょうか。<br>お待たせいたしました。念のためにケースのタイトルを伺ってよろしいでしょうか。</p>
+<h5 id="等待"><a href="#等待" class="headerlink" title="等待"></a>等待</h5><p>申し訳ございませんが、XX エンジニアはただいま調査させていただいておりますので、ケースの更新をいま暫くお待ちください。</p>
+<h5 id="截止时间"><a href="#截止时间" class="headerlink" title="截止时间"></a>截止时间</h5><p>このケースの回答時間をチェックいたしましたところ、少なくともOOまでには何らかのご連絡（回答）をさせて頂く予定となっております。</p>
+<h5 id="SLA"><a href="#SLA" class="headerlink" title="SLA"></a>SLA</h5><p>応答時間の定義に基づいて対応しておりますので、恐れ入りますが、何時何分までにコメントするという事は確約出来ませんが、お客様からの要望があった事を申し伝えておきます。</p>
+<h4 id="找case-ower-的"><a href="#找case-ower-的" class="headerlink" title="找case ower 的"></a>找case ower 的</h4><p>ただいま担当者が対応可能か確認いたしますので少々お待ちください。</p>
+<h5 id="能转"><a href="#能转" class="headerlink" title="能转"></a>能转</h5><p>お待たせいたしました。担当者が対応可能でしたのでお電話転送いたします。</p>
+<h5 id="不能转"><a href="#不能转" class="headerlink" title="不能转"></a>不能转</h5><p>お待たせいたしました。申し訳ございませんが、ただいま担当者が席を外しておりますので(or 別のお電話に出ておりますので or 本日不在(ふざい)ですので) 担当者とお話いただくことができません。お手数ですが、サポートケースにご質問内容を記載(きさい)いただけませんでしょうか。」</p>
+<h5 id="回电话"><a href="#回电话" class="headerlink" title="回电话"></a>回电话</h5><p>担当者から折り返しのお電話をさせていただきます。お名前と電話番号をお教えください。すぐに折り返しのお電話ができるかお約束はできませんが、なるべく早くお電話するよう担当者に伝えます。</p>
+<h4 id="重大度"><a href="#重大度" class="headerlink" title="重大度"></a>重大度</h4><p>重大度については本番環境で業務影響が発生している場合に重大度2以上となり、そうでない場合には重大度は3以下に設定いただけますようお願いいたします。(重大度の定義は青いはてなのマークをクリックすることでご確認いただけます。)</p>
+<h4 id="CVE"><a href="#CVE" class="headerlink" title="CVE"></a>CVE</h4><p>Common Vulnerabilities and Exposures identifiers (“CVE name” または単純に “CVE”) は、情報セキュリティ問題 (特に、セキュリティの脆弱性および問題) について、ベンダーに依存しない標準となる名称を提供します。Red Hat エラータ、他ベンダーのセキュリティ報告、バグ追跡システムなどの、セキュリティ関連のやりとりに CVE が使用されます。システムおよびネットワーク管理者は、特定の CVE 名に対してシステムにパッチがあたっていることを確認するよう依頼されます。</p>
+<p>脆弱性については弊社では CVE Database を提供しており、ご利用の製品に影響があるかどうかをお客様ご自身(じしん)で調べていただくことができます。</p>
+<p>CVE-xxxx-xxxx はお客様がご利用の RHEL7 には影響はございません。</p>
+<h4 id="字符类型"><a href="#字符类型" class="headerlink" title="字符类型"></a>字符类型</h4><p>RHEL は UTF-8 でのみ動作確認(テスト)されています。他の文字コードはサポートされません。  </p>
+<p>文字コードに euc-jp や shift-jis をご使用いただくことは技術的には可能ですが、euc-jp や shift-jis を使用していることによって発生したと思われる問題についてはサポートすることができません。</p>
+<h4 id="L3-ONLY"><a href="#L3-ONLY" class="headerlink" title="L3-ONLY"></a>L3-ONLY</h4><p>お客様がお持ちのご契約は L3-only (エルスリーオンリー) のご契約です。<br>L3-only の場合、技術的なご質問は弊社ではなくサブスクリプションを購入されたOEM (オーイーエム) ベンダー様の窓口 (まどぐち) で行 (おこな) っていただく必要がございます。<br>恐れ入りますが、サブスクリプションを購入されたベンダー様の窓口までお問い合わせいただけますでしょうか。</p>
+<p> Dell 様や HP 様などのハードウェアベンダー様であることが一般的です。ハードウェアと一緒に L3-only のサブスクリプションを購入されていることが多いです。</p>
+<p> お客様がどちらの会社と契約されているかは弊社ではわからないため、お客様ご自身(じしん)でご確認いただく必要がございます。</p>
+<h4 id="没有订阅"><a href="#没有订阅" class="headerlink" title="没有订阅"></a>没有订阅</h4><p>大変申し訳ございませんが、こちらは技術的な質問を承る窓口ですので、ご案内ができません。ご購入いただいた時のご担当者様へ確認いただくか、この電話のオプション３番の窓口へお問い合わせいただければと存じます。    # CS への誘導</p>
+<h4 id="看系统版本"><a href="#看系统版本" class="headerlink" title="看系统版本"></a>看系统版本</h4><p>システムに保存されているレッドハットリリースファイルでご確認いただけます。<br>はい、フルパスで申し上げます。スラ、エトセ (/etc。 スラ、レッドハット、ハイフン (/redhat-。<br>リリース (release) です<br>バージョン 7 ですね。</p>
+<h4 id="为什么不能电话解决"><a href="#为什么不能电话解决" class="headerlink" title="为什么不能电话解决"></a>为什么不能电话解决</h4><p>「調査で利用する資料をファイルで提供いただく必要がありますので、引き続き電話で対応することができません」<br>「電話では、聞き取りミスや漏れが起こる可能性が残りますので、情報を正確にヒアリングすることは困難です」  </p>
+<h4 id="电话支持范围"><a href="#电话支持范围" class="headerlink" title="电话支持范围"></a>电话支持范围</h4><p>お電話でご案内できる範囲としてはですね、例えば、何か特定のエラーメッセージが出てるということであれば、そのエ ラーメッセージについて、ナレッジベースの既知事例、検索して、ご案内ということができるんです。</p>
+<h4 id="RHEL5"><a href="#RHEL5" class="headerlink" title="RHEL5"></a>RHEL5</h4><h4 id="结尾"><a href="#结尾" class="headerlink" title="结尾"></a>结尾</h4><p>ご質問は以上でよろしいでしょうか？//// 他に何かご質問はございますか？  </p>
+<p>ケース上でご連絡お待ちしております。担当の曾が承りました、ご利用ありがとうございました。</p>
+<p>承知致しました。今回は担当の杜が承りました。ご利用、ありがとうございました. </p>
+<h4 id="字母及符号"><a href="#字母及符号" class="headerlink" title="字母及符号"></a>字母及符号</h4><p>数字および記号の読み方 (参考 : NATO フォネティックコード)<br>A: エー : アルファ (Alpha) のエー, アクセス(access), アカウント(account), アプリ(application)<br>B: ビー : ブラボー (Bravo) のビー, バット(bat), ボールペン(ballpen), べースボール(baseball), ブック(book) C: シー : チャーリー (Charlie) のシー, チャイナ(China),<br>C 言語, ケース(case)<br>D: デー : デルタ (Delta) のデー, データ(Data), デフォルト(default), デバイス(device)<br>E: イー : エコー (Echo) のイー, エンジニア(engineer), email, エラー(Error)<br>F: エフ : フォックストロット (Foxtrot) のエフ, フランス(France), ファイル(file), フレンド(friend)<br>G: ジー : ゴルフ (Golf) のジー, ゴルフ(golf), ゲーム(game)<br>H: エイチ : ホテル (Hotel) のエイチ, ハード(hard), ホスト(host), ホテル(hotel)<br>I: アイ : インディア (India) のアイ, インストール(install), イメージ(image), インフォ(info), インプット(input) J: ジェイ : ジュリエット (Juliet) のジェイ, ジャパン(japan), ジャバ(java)<br>K: ケイ : キロ (Kilo) のケイ, カーネル(kernel), キーボード(keyboard), キーワード(keyword)<br>L: エル : リマ (Lima) のエル, リナックス(Linux), リスト(list), ライン(line)<br>M: エム : マイク (Mike) のエム, メモリ(memory), メール(mail), メモ(memo), メニュー(menu) N: エヌ : ノベンバー (November) のエヌ, ネットワーク(network), ニュース(news), ノート(note) O: オー : オスカー (Oscar) のオー, オーエス(os), オプション(option),オープン(open)<br>P: ピー : パパ (Papa) のピー, プリント(print), パッケージ(package), パラメーター(parameter)<br>Q: キュー : ケベック (Quebec) のキュー, QR コード(QR code), クエスチョン(question), クウォーター(quota)<br>R: アール : ロミオ (Romeo) のアール, レッドハット(RedHat), リブート(reboot), ルート(root), リモート(remote), レスキ ュー(rescue)<br>S: エス : シエラ (Sierra) のエス, サービス(service), ソフトウェア(software), ソリューション(solution), サポート (support)<br>T: テー : タンゴ (Tango) のティー, テスト(test), 東京(tokyo), テキスト(text)<br>U: ユー : ユニフォーム (Uniform) のユー, USA, USB, ユーザー(user)<br>V: ブイ : ビクター (Victor) のブイ, バージョン(version), ベンダー(vendor)<br>W: ダブリュー : ウィスキー (Whiskey) のダブリュー, ワード(word), ウェブ(web),ウィンドウ(window)<br>X: エックス : エックス線 (X-Ray) のエックス, X 線、XYZ、X ウィンドウ(X Window)<br>Y: ワイ : ヤンキー (Yankee) のワイ, イエス(yes), yum, イエロー(yellow), ヨガ(yoga)<br>Z: ゼット : ズールー (Zulu) のゼロ, ゼロ(zero), ゾーン(zone)<br>1: いち<br>2: に<br>3: さん<br>4: よん<br>5: ご<br>6: ろく<br>7: なな<br>8: はち<br>9: きゅう<br>0: ぜろ<br>/: スラッシュ .: ドット<br>:: コロン<br>-: ハイフン<br>+: プラス<br>_: アンダーバー (アンダースコア)<br>*: アスタリスク<br>|: 縦棒 (パイプ記号)<br>~: チルダ<br>@: アットマーク<br>!: エクスクラメーション (びっくりマーク)<br>?: くエスチョンマーク (はてなマーク、はてな記号) \: バックスラッシュ<br>“: ダブルクオート (二重かっこ)<br>‘: シングルクオート (一重かっこ)<br>`: バッククオート ;: セミコロン  </p>
+<p>#: シャープ<br>$: ドル記号<br>%: パーセント<br>^: ハット<br>&amp;: アンパサンド (アンド記号) +: プラス<br>=: イコール<br>( ): かっこ (丸かっこ)<br>{ }: 中かっこ (弓かっこ)<br>[ ]: 大かっこ (角かっこ)<br>&lt; &gt;: 山かっこ<br>1 ついたち 2 ふつか<br>9 ここのか 10 とおか<br>3 みっか<br>11 じゅういちにち<br>5 いつか<br>12 じゅうににち 13 じゅうさんにち<br>14 じゅうよっか<br>18 じゅうはちにち 22 にじゅうににち 25 にじゅうごにち 28 にじゅうはちにち<br>1~10:<br>15 じゅうごにち 16 じゅうろくにち 17 じゅうしちにち 19 じゅうくにち 20 はつか 21 にじゅういちにち<br>24 にじゅうよっか<br>27 にじゅうしちにち<br>23 にじゅうさんにち 26 にじゅうろくにち 29 にじゅうくにち<br>4 よっか<br>6 むいか<br>7 なのか<br>8 ようか<br>30 さんじゅうにち 31 さんじゅういちにち   ひとつ、ふたつ、みっつ、よっつ、いつつ、むっつ、ななつ、やっつ、ここのつ、とおつ  </p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/japanese/" rel="tag"><i class="fa fa-tag"></i> japanese</a>
+          
+            <a href="/tags/redhat/" rel="tag"><i class="fa fa-tag"></i> redhat</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/09/10/9-VFS虚拟文件系统/" rel="next" title="VFS 虚拟文件系统">
+                <i class="fa fa-chevron-left"></i> VFS 虚拟文件系统
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/09/11/11-XFS-quotacheck源码/" rel="prev" title="XFS-quotacheck源码">
+                XFS-quotacheck源码 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/icon.jpg" alt="Tomoku">
+            
+              <p class="site-author-name" itemprop="name">Tomoku</p>
+              <div class="site-description motion-element" itemprop="description">勿忘初心</div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">14</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  
+                    
+                      <a href="/tags/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">13</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+            <div class="links-of-author motion-element">
+              
+                <span class="links-of-author-item">
+                  
+                  
+                    
+                  
+                  
+                    
+                  
+                  <a href="https://github.com/Tomoku-dm" title="GitHub &rarr; https://github.com/Tomoku-dm" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+                </span>
+              
+                <span class="links-of-author-item">
+                  
+                  
+                    
+                  
+                  
+                    
+                  
+                  <a href="/dm990107744@gmail.com" title="E-Mail &rarr; dm990107744@gmail.com"><i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                </span>
+              
+            </div>
+          
+
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                推荐阅读
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.5isjyx.com/1234" title="http://www.5isjyx.com/1234" rel="noopener" target="_blank">福利网址</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+            
+          
+	 <iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width="298" height="52" src="//music.163.com/outchain/player?type=2&id=409650927&auto=0&height=32"></iframe>
+	  
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#开头"><span class="nav-number">1.</span> <span class="nav-text">开头</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#确认订阅"><span class="nav-number">2.</span> <span class="nav-text">确认订阅</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#アカウント番号-不对"><span class="nav-number">2.1.</span> <span class="nav-text">アカウント番号 不对</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#什么是-アカウント番号"><span class="nav-number">2.1.1.</span> <span class="nav-text">什么是 アカウント番号</span></a></li></ol></li><li class="nav-item nav-level-5"><a class="nav-link" href="#公司名人名不对"><span class="nav-number">2.2.</span> <span class="nav-text">公司名人名不对</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#转-CS"><span class="nav-number">3.</span> <span class="nav-text">转 CS</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#没听懂"><span class="nav-number">4.</span> <span class="nav-text">没听懂</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#再等待一会"><span class="nav-number">5.</span> <span class="nav-text">再等待一会</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#链接"><span class="nav-number">6.</span> <span class="nav-text">链接</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#搜索"><span class="nav-number">6.1.</span> <span class="nav-text">搜索</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#直接给链接"><span class="nav-number">6.2.</span> <span class="nav-text">直接给链接</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#没找到链接"><span class="nav-number">6.3.</span> <span class="nav-text">没找到链接</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#给链接之后"><span class="nav-number">6.4.</span> <span class="nav-text">给链接之后</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#语言切换"><span class="nav-number">6.5.</span> <span class="nav-text">语言切换</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#开-case"><span class="nav-number">7.</span> <span class="nav-text">开 case</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#什么是-case"><span class="nav-number">7.1.</span> <span class="nav-text">什么是 case</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#怎么开-case"><span class="nav-number">7.2.</span> <span class="nav-text">怎么开 case</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#sosreport"><span class="nav-number">8.</span> <span class="nav-text">sosreport</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#催-case"><span class="nav-number">9.</span> <span class="nav-text">催 case</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#开了-CASE"><span class="nav-number">10.</span> <span class="nav-text">开了 CASE</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#等待"><span class="nav-number">10.1.</span> <span class="nav-text">等待</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#截止时间"><span class="nav-number">10.2.</span> <span class="nav-text">截止时间</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#SLA"><span class="nav-number">10.3.</span> <span class="nav-text">SLA</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#找case-ower-的"><span class="nav-number">11.</span> <span class="nav-text">找case ower 的</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#能转"><span class="nav-number">11.1.</span> <span class="nav-text">能转</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#不能转"><span class="nav-number">11.2.</span> <span class="nav-text">不能转</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#回电话"><span class="nav-number">11.3.</span> <span class="nav-text">回电话</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#重大度"><span class="nav-number">12.</span> <span class="nav-text">重大度</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#CVE"><span class="nav-number">13.</span> <span class="nav-text">CVE</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#字符类型"><span class="nav-number">14.</span> <span class="nav-text">字符类型</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#L3-ONLY"><span class="nav-number">15.</span> <span class="nav-text">L3-ONLY</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#没有订阅"><span class="nav-number">16.</span> <span class="nav-text">没有订阅</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#看系统版本"><span class="nav-number">17.</span> <span class="nav-text">看系统版本</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#为什么不能电话解决"><span class="nav-number">18.</span> <span class="nav-text">为什么不能电话解决</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#电话支持范围"><span class="nav-number">19.</span> <span class="nav-text">电话支持范围</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#RHEL5"><span class="nav-number">20.</span> <span class="nav-text">RHEL5</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#结尾"><span class="nav-number">21.</span> <span class="nav-text">结尾</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#字母及符号"><span class="nav-number">22.</span> <span class="nav-text">字母及符号</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Tomoku</span>
+
+  
+
+  
+</div>
+<!--
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.1.0</div>
+
+
+
+
+-->
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/utils.js?v=7.1.0"></script>
+
+  <script src="/js/motion.js?v=7.1.0"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/affix.js?v=7.1.0"></script>
+
+  <script src="/js/schemes/pisces.js?v=7.1.0"></script>
+
+
+
+
+  
+  <script src="/js/scrollspy.js?v=7.1.0"></script>
+<script src="/js/post-details.js?v=7.1.0"></script>
+
+
+
+  
+
+
+  <script src="/js/next-boot.js?v=7.1.0"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

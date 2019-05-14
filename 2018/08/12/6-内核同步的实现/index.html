@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.1.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.1.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.1.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.1.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.1.0" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.1.0',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="原子操作内核提供了两组原子操作的接口，一组对整数进行操作，一组对单独的位进行操作。 1.原子的整数操作整数的原子操作只对atomiac_t 类型的数据进行处理，好处是让原子函数只接收atomic_t类型的数据，也保证了该类型的数据不传递给其他函数。另一个好处是使得原子操作最终接收到的是内存地址。123456789101112131415161718//atomic_t 定义在 &amp;lt;linux/">
+<meta name="keywords" content="kernel">
+<meta property="og:type" content="article">
+<meta property="og:title" content="内核同步的实现">
+<meta property="og:url" content="http://yoursite.com/2018/08/12/6-内核同步的实现/index.html">
+<meta property="og:site_name" content="Tomoku&#39;s blog">
+<meta property="og:description" content="原子操作内核提供了两组原子操作的接口，一组对整数进行操作，一组对单独的位进行操作。 1.原子的整数操作整数的原子操作只对atomiac_t 类型的数据进行处理，好处是让原子函数只接收atomic_t类型的数据，也保证了该类型的数据不传递给其他函数。另一个好处是使得原子操作最终接收到的是内存地址。123456789101112131415161718//atomic_t 定义在 &amp;lt;linux/">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-05-05T15:51:53.515Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="内核同步的实现">
+<meta name="twitter:description" content="原子操作内核提供了两组原子操作的接口，一组对整数进行操作，一组对单独的位进行操作。 1.原子的整数操作整数的原子操作只对atomiac_t 类型的数据进行处理，好处是让原子函数只接收atomic_t类型的数据，也保证了该类型的数据不传递给其他函数。另一个好处是使得原子操作最终接收到的是内存地址。123456789101112131415161718//atomic_t 定义在 &amp;lt;linux/">
+
+
+
+
+
+  
+  
+  <link rel="canonical" href="http://yoursite.com/2018/08/12/6-内核同步的实现/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>内核同步的实现 | Tomoku's blog</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Tomoku's blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">在学习技术的道路上缓慢爬行</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/08/12/6-内核同步的实现/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Tomoku">
+      <meta itemprop="description" content="勿忘初心">
+      <meta itemprop="image" content="/images/icon.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Tomoku's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">内核同步的实现
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-08-12 23:51:20" itemprop="dateCreated datePublished" datetime="2018-08-12T23:51:20+08:00">2018-08-12</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-05-05 23:51:53" itemprop="dateModified" datetime="2019-05-05T23:51:53+08:00">2019-05-05</time>
+              
+            
+          </span>
+
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="原子操作"><a href="#原子操作" class="headerlink" title="原子操作"></a>原子操作</h3><p>内核提供了两组原子操作的接口，一组对<strong>整数</strong>进行操作，一组对<strong>单独的位</strong>进行操作。</p>
+<h4 id="1-原子的整数操作"><a href="#1-原子的整数操作" class="headerlink" title="1.原子的整数操作"></a>1.原子的整数操作</h4><p>整数的原子操作只对<code>atomiac_t</code> 类型的数据进行处理，好处是让原子函数只接收<code>atomic_t</code>类型的数据，也保证了该类型的数据不传递给其他函数。另一个好处是使得原子操作最终接收到的是内存地址。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">//atomic_t 定义在 &lt;linux/types.h&gt;:</span><br><span class="line">typedef struct &#123; </span><br><span class="line">    volatile int counter;</span><br><span class="line">&#125; atomic_t;</span><br><span class="line"></span><br><span class="line">//所有的原子整数操作都声明在 &lt;asm/atomic.h&gt;</span><br><span class="line">ATOMIC_INIT(int i)           //初始化</span><br><span class="line">atomic_t u = ATOMIC_INIT(0); /*初始化并赋值 */</span><br><span class="line"></span><br><span class="line">//这两个可以实现计数器</span><br><span class="line">void atomic_inc(atomic_t *v) //Atomically add one to v. </span><br><span class="line">void atomic_dec(atomic_t *v) //Atomically subtract one from v.</span><br><span class="line"></span><br><span class="line">int atomic_read(atomic_t *v) //Atomically read the integer value of v. 可以用来转换成 int</span><br><span class="line">void atomic_set(atomic_t *v, int i) //Atomically set v equal to i.</span><br><span class="line"></span><br><span class="line">//执行一个操作然后返回结果</span><br><span class="line">int atomic_dec_and_test(atomic_t *v) //减1 如果是0 返回TRUE</span><br></pre></td></tr></table></figure></p>
+<p>原子操作通常是内联函数，通常通过内嵌汇编指令实现。如果函数本身就是原子的，往往被定义为一个宏。读操作本身就是一个原子操作，所以<code>atomic_read()</code>就是一个宏。</p>
+<p><strong>64位的原子变量</strong><br><code>atomic_t</code> 和<code>atomic64_t</code> 由于移植性原因，<code>atomic_t</code>的大小无法在体系机构间改变，要使用64的原子变量的话就需要使用<code>atomic64_t</code>。和<code>atomic_t</code> 一样,<code>atomic64_t</code>也有一样的原子操作函数。</p>
+<h4 id="2-原子位操作"><a href="#2-原子位操作" class="headerlink" title="2.原子位操作"></a>2.原子位操作</h4><ul>
+<li>位操作函数是对普通的内存地址进行操作的，参数是一个指针和一个位号。  </li>
+<li>位操作是对普通的指针进行的，所以没有特定的数据类型。只要指针指向了你想要的数据，就可以进行操作。</li>
+</ul>
+<p><strong>原子位操作函数</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">void set_bit(int nr, void *addr)    #Atomically set the nr-th bit starting from addr.</span><br><span class="line">set_bit(0, &amp;word);  # 设置 word 的第0位</span><br><span class="line"></span><br><span class="line">void clear_bit(int nr, void *addr)  #Atomically clear the nr-th bit starting from addr.</span><br><span class="line">void change_bit(int nr, void *addr) #Atomically flip the value of the nr-th bit starting from addr.</span><br><span class="line">int test_and_set_bit(int nr, void *addr) #Atomically set the nr-th bit starting from addr and return the previous value.</span><br><span class="line">int test_and_clear_bit(int nr, void *addr) #Atomically clear the nr-th bit starting from addr and return the previous value.</span><br><span class="line">int test_and_change_bit(int nr, void *addr) #Atomically flip the nr-th bit starting from addr and return the previous value.</span><br><span class="line">int test_bit(int nr, void *addr)# Atomically return the value of the nr￾th bit starting from addr.</span><br></pre></td></tr></table></figure>
+<h3 id="自旋锁（spin-lock）"><a href="#自旋锁（spin-lock）" class="headerlink" title="自旋锁（spin lock）"></a>自旋锁（spin lock）</h3><p>并不是所有的临界区只处理变量的加减，有的临界区需要处理复杂的数据结构，且跨越多个函数。例如将一个数据结构的数据拿出并转换格式和解析放到另外一个数据结构中。这时候就需要<strong>锁</strong>来提供保护。<strong>自旋锁</strong>是内核中最常见的，自旋锁最多被一个运行线程持有，等待的线程会一直处于自旋的状态（loops— spins—waiting）。</p>
+<p><strong>信号量</strong>：自旋的状态一直消耗 CPU，适合短时间的锁。另一种形式就是让后来的线程不循环等待，去执行其他代码。这样会带来开销，并进行2次上下文切换。</p>
+<h4 id="自旋锁的实现"><a href="#自旋锁的实现" class="headerlink" title="自旋锁的实现"></a>自旋锁的实现</h4><p>自旋锁的实现与体系结构相关，通过汇编实现。linux 的自旋锁是不可递归的。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">//体系结构相关代码 &lt;asm/spinlock.h&gt;</span><br><span class="line">//可用接口代码 &lt;linux/spinlock.h&gt;</span><br><span class="line"></span><br><span class="line">// 自旋锁的基本形式</span><br><span class="line">DEFINE_SPINLOCK(mr_lock);</span><br><span class="line">spin_lock(&amp;mr_lock);</span><br><span class="line">/* critical region ... */ </span><br><span class="line">spin_unlock(&amp;mr_lock);</span><br></pre></td></tr></table></figure>
+<p><strong>中断处理程序</strong>可以使用自旋锁（也只可以使用自旋锁），当时在获取锁之前，一定要禁止本地中断(当前 CPU 的中断请求)，否则，中断会打断已经获取锁的内核代码，造成死锁。在不同 CPU 上不需要。</p>
+<p>关于自旋锁和下半部，下半部会抢占进程上下文，需要在加锁的同时禁止下半部，同样中断也会抢占下半部，下半部获取锁后也需要禁止中断。tasklet 和 软中断不会抢占另外的 tasklet 和 软中断。不需要禁用下半部。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//禁止中断同时获取锁的 接口，会保存中断的状态，没有激活的中断不会被激活</span></span><br><span class="line">spin_lock_irqsave(&amp;mr_lock, flags);</span><br><span class="line"><span class="comment">/* critical region ... */</span> </span><br><span class="line">spin_unlock_irqrestore(&amp;mr_lock, flags);</span><br><span class="line"></span><br><span class="line"><span class="comment">//明确中断是激活的状态下，用以下代码，解锁后直接激活。</span></span><br><span class="line">spin_lock_irq(&amp;mr_lock); </span><br><span class="line"><span class="comment">/* critical section ... */</span> </span><br><span class="line">spin_unlock_irq(&amp;mr_lock);</span><br></pre></td></tr></table></figure></p>
+<blockquote>
+<p>内核配置选项 CONFIG_DEBUG_SPINLOCK 和 CONFIG_DEBUG_LOCK_ALLOC 帮助调试锁操作</p>
+</blockquote>
+<p><strong>自旋锁的函数</strong></p>
+<table>
+<thead>
+<tr>
+<th>函数</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>spin_lock()</td>
+<td>Acquires given lock</td>
+</tr>
+<tr>
+<td>spin_lock_irq()</td>
+<td>Disables local interrupts and acquires given lock</td>
+</tr>
+<tr>
+<td>spin_lock_irqsave()</td>
+<td>Saves current state of local interrupts, disables local inter- rupts, and acquires given lock</td>
+</tr>
+<tr>
+<td>spin_unlock()</td>
+<td>Releases given lock</td>
+</tr>
+<tr>
+<td>spin_unlock_irq()</td>
+<td>Releases given lock and enables local interrupts</td>
+</tr>
+<tr>
+<td>spin_unlock_irqrestore()</td>
+<td>Releases given lock and restores local interrupts to given pre- vious state</td>
+</tr>
+<tr>
+<td>spin_lock_init()</td>
+<td>Dynamically initializes given spinlock_t 获得一个spinlock_t类型的指针</td>
+</tr>
+<tr>
+<td>spin_trylock()</td>
+<td>Tries to acquire given lock; if unavailable, returns nonzero</td>
+</tr>
+<tr>
+<td>spin_is_locked()</td>
+<td>Returns nonzero if the given lock is currently acquired, other- wise it returns zero</td>
+</tr>
+</tbody>
+</table>
+<h4 id="读写自旋锁"><a href="#读写自旋锁" class="headerlink" title="读写自旋锁"></a>读写自旋锁</h4><p>一个链表读操作是可以并发的，写操作只能一个进程执行，并且在写的时候不允许读，这种就可以用读写自旋锁。<br>但是有可能多个读者一直占用锁，造成写者等待过久。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//初始化</span></span><br><span class="line">DEFINE_RWLOCK(mr_rwlock);</span><br><span class="line"></span><br><span class="line"><span class="comment">//Then, in the reader code path:</span></span><br><span class="line">read_lock(&amp;mr_rwlock);</span><br><span class="line"><span class="comment">/* critical section (read only) ... */</span> </span><br><span class="line">read_unlock(&amp;mr_rwlock);</span><br><span class="line"></span><br><span class="line"><span class="comment">//Finally, in the writer code path:</span></span><br><span class="line">write_lock(&amp;mr_rwlock);</span><br><span class="line"><span class="comment">/* critical section (read and write) ... */</span> </span><br><span class="line">write_unlock(&amp;mr_lock);</span><br><span class="line"></span><br><span class="line"><span class="comment">//下面代码会带来死锁，因为写锁会一直等待读锁释放。</span></span><br><span class="line">read_lock(&amp;mr_rwlock); write_lock(&amp;mr_rwlock);</span><br></pre></td></tr></table></figure>
+<p>如果你在中断处理程序使用 <code>read_lock()</code>而不是<code>read_lock_irqsave()</code>那需要额外禁止写操作中断<code>write_lock_irqsave()</code>，否则会造成死锁。</p>
+<h3 id="信号量"><a href="#信号量" class="headerlink" title="信号量"></a>信号量</h3><p>Linux 中的信号量是一种睡眠锁,当任务获取一个被占用的信号量时，回进入等待队列进行睡眠，CPU 去执行其他任务。</p>
+<ul>
+<li>在占有信号量的同时不能占有自旋锁。等待信号量的时候回去睡眠。</li>
+<li>信号量不会禁止内核抢占。</li>
+</ul>
+<p><strong>计数信号量和二值信号量</strong></p>
+<p>二值信号量：同时最多一个任务持有信号量锁。常用，也叫互斥信号量。<br>计数信号量：允许同一时刻多个任务持有信号量，在声明的时候指定数量，用的不多。</p>
+<p><strong>信号量的获取与释放</strong><br>两个原子操作 P()/down()  和  V()/up()  ，down()操作后，计数减1，大于等于0，获取锁，小于0进入队列并睡眠。临界区操作完成后，up()释放信号量计数加1.</p>
+<p><strong>读写信号量</strong> 几乎和读写自旋锁一样，提供了一个<code>down_read_trylock()</code>转换读写锁。</p>
+<h4 id="信号量的实现"><a href="#信号量的实现" class="headerlink" title="信号量的实现"></a>信号量的实现</h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//信号量的实现与体系结构相关 代码在&lt;asm/semaphore.h&gt;</span></span><br><span class="line"></span><br><span class="line">创建和初始化：</span><br><span class="line"><span class="comment">// count 是计数</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">semaphore</span> <span class="title">name</span>;</span> </span><br><span class="line">sema_init(&amp;name, count);</span><br><span class="line"></span><br><span class="line"><span class="comment">//创建互斥信号量</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="title">DECLARE_MUTEX</span><span class="params">(name)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">//动态创建</span></span><br><span class="line">sema_init(sem, count);</span><br><span class="line">init_MUTEX(sem);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">信号量的使用：</span><br><span class="line"><span class="comment">/* define and declare a semaphore, named mr_sem, with a count of one */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="title">DECLARE_MUTEX</span><span class="params">(mr_sem)</span></span>;</span><br><span class="line"><span class="comment">/* attempt to acquire the semaphore ... */</span> </span><br><span class="line"><span class="keyword">if</span> (down_interruptible(&amp;mr_sem)) &#123;</span><br><span class="line"><span class="comment">/* </span></span><br><span class="line"><span class="comment">down_interruptible(&amp;mr_sem) 获取信号量，如果不可用，是进程进入睡眠TASK_INTERRUPTIBLE</span></span><br><span class="line"><span class="comment">signal received, semaphore not acquired ... */</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">/* critical region ... */</span></span><br><span class="line"><span class="comment">/* release the given semaphore */</span> </span><br><span class="line">up(&amp;mr_sem);</span><br></pre></td></tr></table></figure>
+<h3 id="互斥体-mutex"><a href="#互斥体-mutex" class="headerlink" title="互斥体(mutex)"></a>互斥体(mutex)</h3><p>可以视为特别的信号量，指的是任何可以睡眠的强制互斥锁（计数只能是1），比如计数为1的信号量。<br>mutex 对应数据结构是 mutex，操作接口简单，实现高效，使用限制强。</p>
+<table>
+<thead>
+<tr>
+<th>函数</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DEFINE_MUTEX(name);</td>
+<td>静态定义</td>
+</tr>
+<tr>
+<td>mutex_init(&amp;mutex);</td>
+<td>动态定义</td>
+</tr>
+<tr>
+<td>mutex_lock(struct mutex *)</td>
+<td>Locks the given mutex; sleeps if the lock is unavailable</td>
+</tr>
+<tr>
+<td>mutex_unlock(struct mutex *)</td>
+<td>Unlocks the given mutex</td>
+</tr>
+<tr>
+<td>mutex_trylock(struct mutex *)</td>
+<td>Tries to acquire the given mutex; returns one if suc- cessful and the lock is acquired and zero otherwise</td>
+</tr>
+<tr>
+<td>mutex_is_locked (struct mutex *)</td>
+<td>Returns one if the lock is locked and zero otherwise</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><code>mutex</code>不能在中断和下半部使用</li>
+<li>持有<code>mutex</code>的进程不能退出</li>
+<li>首选<code>mutex</code>，如果不能满足其约束条件，在使用信号量。</li>
+</ul>
+<h4 id="锁的选择"><a href="#锁的选择" class="headerlink" title="锁的选择"></a>锁的选择</h4><table>
+<thead>
+<tr>
+<th>需求</th>
+<th>选择的加锁方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Low overhead locking</td>
+<td>Spin lock </td>
+</tr>
+<tr>
+<td>Short lock hold time</td>
+<td>Spin lock </td>
+</tr>
+<tr>
+<td>Long lock hold time</td>
+<td>Mutex</td>
+</tr>
+<tr>
+<td>Need to lock from interrupt context</td>
+<td>Spin lock</td>
+</tr>
+<tr>
+<td>Need to sleep while holding lock</td>
+<td>Mutex</td>
+</tr>
+</tbody>
+</table>
+<h3 id="其他锁"><a href="#其他锁" class="headerlink" title="其他锁"></a>其他锁</h3><h4 id="完成变量-Completion-Variables"><a href="#完成变量-Completion-Variables" class="headerlink" title="完成变量(Completion Variables)"></a>完成变量(Completion Variables)</h4><p>Completion Variables 一个任务在等待另一个任务完成，这个任务完成工作后唤醒等待的任务。vfork()就是使用这个来唤醒父进程。</p>
+<h4 id="顺序锁（seq）"><a href="#顺序锁（seq）" class="headerlink" title="顺序锁（seq）"></a>顺序锁（seq）</h4><p>一种新型锁，依靠序列计数器，写操作会+1 ，读数据前后会读取这个数，值相同代表没有写入。  </p>
+<ul>
+<li>jiffies_64 使用的是 seq 锁<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">u64 <span class="title">get_jiffies_64</span><span class="params">(<span class="keyword">void</span>)</span> </span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">      <span class="keyword">unsigned</span> <span class="keyword">long</span> seq; u64 ret;</span><br><span class="line">      <span class="keyword">do</span> &#123;</span><br><span class="line">              seq = read_seqbegin(&amp;xtime_lock);</span><br><span class="line">              ret = jiffies_64;</span><br><span class="line">      &#125; <span class="keyword">while</span> (read_seqretry(&amp;xtime_lock, seq)); </span><br><span class="line">      <span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 更新定时器的写锁</span></span><br><span class="line">write_seqlock(&amp;xtime_lock); </span><br><span class="line">jiffies_64 += <span class="number">1</span>; </span><br><span class="line">write_sequnlock(&amp;xtime_lock);</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h4 id="禁止抢占"><a href="#禁止抢占" class="headerlink" title="禁止抢占"></a>禁止抢占</h4><p>单CPU 可能不需要自旋锁，这时候会遇到伪并发，抢占进程操作同一个数据的情况。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">preempt_disable();    <span class="comment">//禁止内核抢占，抢占计数+1</span></span><br><span class="line"><span class="comment">/* preemption is disabled ... */</span> </span><br><span class="line">preempt_enable();</span><br></pre></td></tr></table></figure></p>
+<h4 id="顺序和屏障"><a href="#顺序和屏障" class="headerlink" title="顺序和屏障"></a>顺序和屏障</h4><p>程序代码编译后，在 cpu 中执行的顺序可能会被 CPU 重新排序，可以用屏障的方法来固定顺序。<br>函数|描述<br>–|–<br>rmb() |Prevents loads from being reordered across the barrier<br>read_barrier_depends()  |Prevents data-dependent loads from being re- ordered across the barrier<br>wmb() |Prevents stores from being reordered across the barrier<br>mb() |Prevents load or stores from being reordered across the barrier<br>barrier() |Prevents the compiler from optimizing stores or loads across the barrier</p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/kernel/" rel="tag"><i class="fa fa-tag"></i> kernel</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/08/12/5-内核的同步以及锁机制/" rel="next" title="内核的同步以及锁机制">
+                <i class="fa fa-chevron-left"></i> 内核的同步以及锁机制
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/08/13/7-LUKS磁盘加密/" rel="prev" title="LUKS磁盘加密">
+                LUKS磁盘加密 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/icon.jpg" alt="Tomoku">
+            
+              <p class="site-author-name" itemprop="name">Tomoku</p>
+              <div class="site-description motion-element" itemprop="description">勿忘初心</div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">14</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  
+                    
+                      <a href="/tags/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">13</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+            <div class="links-of-author motion-element">
+              
+                <span class="links-of-author-item">
+                  
+                  
+                    
+                  
+                  
+                    
+                  
+                  <a href="https://github.com/Tomoku-dm" title="GitHub &rarr; https://github.com/Tomoku-dm" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+                </span>
+              
+                <span class="links-of-author-item">
+                  
+                  
+                    
+                  
+                  
+                    
+                  
+                  <a href="/dm990107744@gmail.com" title="E-Mail &rarr; dm990107744@gmail.com"><i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                </span>
+              
+            </div>
+          
+
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                推荐阅读
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.5isjyx.com/1234" title="http://www.5isjyx.com/1234" rel="noopener" target="_blank">福利网址</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+            
+          
+	 <iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width="298" height="52" src="//music.163.com/outchain/player?type=2&id=409650927&auto=0&height=32"></iframe>
+	  
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#原子操作"><span class="nav-number">1.</span> <span class="nav-text">原子操作</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-原子的整数操作"><span class="nav-number">1.1.</span> <span class="nav-text">1.原子的整数操作</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-原子位操作"><span class="nav-number">1.2.</span> <span class="nav-text">2.原子位操作</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#自旋锁（spin-lock）"><span class="nav-number">2.</span> <span class="nav-text">自旋锁（spin lock）</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#自旋锁的实现"><span class="nav-number">2.1.</span> <span class="nav-text">自旋锁的实现</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#读写自旋锁"><span class="nav-number">2.2.</span> <span class="nav-text">读写自旋锁</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#信号量"><span class="nav-number">3.</span> <span class="nav-text">信号量</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#信号量的实现"><span class="nav-number">3.1.</span> <span class="nav-text">信号量的实现</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#互斥体-mutex"><span class="nav-number">4.</span> <span class="nav-text">互斥体(mutex)</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#锁的选择"><span class="nav-number">4.1.</span> <span class="nav-text">锁的选择</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#其他锁"><span class="nav-number">5.</span> <span class="nav-text">其他锁</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#完成变量-Completion-Variables"><span class="nav-number">5.1.</span> <span class="nav-text">完成变量(Completion Variables)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#顺序锁（seq）"><span class="nav-number">5.2.</span> <span class="nav-text">顺序锁（seq）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#禁止抢占"><span class="nav-number">5.3.</span> <span class="nav-text">禁止抢占</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#顺序和屏障"><span class="nav-number">5.4.</span> <span class="nav-text">顺序和屏障</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Tomoku</span>
+
+  
+
+  
+</div>
+<!--
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.1.0</div>
+
+
+
+
+-->
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/utils.js?v=7.1.0"></script>
+
+  <script src="/js/motion.js?v=7.1.0"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/affix.js?v=7.1.0"></script>
+
+  <script src="/js/schemes/pisces.js?v=7.1.0"></script>
+
+
+
+
+  
+  <script src="/js/scrollspy.js?v=7.1.0"></script>
+<script src="/js/post-details.js?v=7.1.0"></script>
+
+
+
+  
+
+
+  <script src="/js/next-boot.js?v=7.1.0"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
