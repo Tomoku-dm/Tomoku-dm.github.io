@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.1.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.1.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.1.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.1.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.1.0" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.1.0',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="一、前言目前需求如下：   公司有10台带图形化的虚拟机供100名左右的用户使用，所有用户通过一个域名或者 IP 连接，平台随机分配一个机器给用户使用。 实现方式：   平台使用两台 haproxy 进行负载均衡分配机器，如果配置单 VIP ，两台haproxy 只有一台机器工作，压力有些大。 两台机器部署 keepalived 并且部署双 VIP，保证两台机器同时工作，使用 DNS 做双VIP">
+<meta name="keywords" content="linux,service">
+<meta property="og:type" content="article">
+<meta property="og:title" content="haproxy+keepalived 多 VIP 部署">
+<meta property="og:url" content="http://yoursite.com/2019/05/24/18-haproxy-keepalived多VIP部署/index.html">
+<meta property="og:site_name" content="Tomoku&#39;s blog">
+<meta property="og:description" content="一、前言目前需求如下：   公司有10台带图形化的虚拟机供100名左右的用户使用，所有用户通过一个域名或者 IP 连接，平台随机分配一个机器给用户使用。 实现方式：   平台使用两台 haproxy 进行负载均衡分配机器，如果配置单 VIP ，两台haproxy 只有一台机器工作，压力有些大。 两台机器部署 keepalived 并且部署双 VIP，保证两台机器同时工作，使用 DNS 做双VIP">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-05-23T17:37:36.027Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="haproxy+keepalived 多 VIP 部署">
+<meta name="twitter:description" content="一、前言目前需求如下：   公司有10台带图形化的虚拟机供100名左右的用户使用，所有用户通过一个域名或者 IP 连接，平台随机分配一个机器给用户使用。 实现方式：   平台使用两台 haproxy 进行负载均衡分配机器，如果配置单 VIP ，两台haproxy 只有一台机器工作，压力有些大。 两台机器部署 keepalived 并且部署双 VIP，保证两台机器同时工作，使用 DNS 做双VIP">
+
+
+
+
+
+  
+  
+  <link rel="canonical" href="http://yoursite.com/2019/05/24/18-haproxy-keepalived多VIP部署/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>haproxy+keepalived 多 VIP 部署 | Tomoku's blog</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Tomoku's blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">在学习技术的道路上缓慢爬行</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/05/24/18-haproxy-keepalived多VIP部署/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Tomoku">
+      <meta itemprop="description" content="勿忘初心">
+      <meta itemprop="image" content="/images/icon.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Tomoku's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">haproxy+keepalived 多 VIP 部署
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2019-05-24 01:36:37 / 修改时间：01:37:36" itemprop="dateCreated datePublished" datetime="2019-05-24T01:36:37+08:00">2019-05-24</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="一、前言"><a href="#一、前言" class="headerlink" title="一、前言"></a>一、前言</h2><p>目前需求如下：  </p>
+<p>公司有10台带图形化的虚拟机供100名左右的用户使用，所有用户通过一个域名或者 IP 连接，平台随机分配一个机器给用户使用。</p>
+<p><strong>实现方式：</strong>  </p>
+<p>平台使用两台 haproxy 进行负载均衡分配机器，如果配置单 VIP ，两台haproxy 只有一台机器工作，压力有些大。 两台机器部署 keepalived 并且部署双 VIP，保证两台机器同时工作，使用 DNS 做双VIP 的轮询。一台机器宕机后，双 VIP 飘到一个机器上。</p>
+<h2 id="二、安装及相关配置文件"><a href="#二、安装及相关配置文件" class="headerlink" title="二、安装及相关配置文件"></a>二、安装及相关配置文件</h2><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> yum install haproxy</span><br><span class="line"><span class="meta">$</span> vim /etc/haproxy/haproxy.cfg             ## 主配置文件</span><br><span class="line"></span><br><span class="line"><span class="meta">$</span> yum install keepalived</span><br><span class="line"><span class="meta">$</span> vim /etc/keepalived/keepalived.conf      ## 主配置文件</span><br><span class="line"><span class="meta">$</span> vim /etc/keepalived/chk_SERVICE.sh       ## keepalived.conf中自定义的服务健康检查脚本</span><br></pre></td></tr></table></figure>
+<h2 id="三、Haporxy-配置"><a href="#三、Haporxy-配置" class="headerlink" title="三、Haporxy 配置"></a>三、Haporxy 配置</h2><ol>
+<li>haproxy.cfg  主文件配置 ，两台机器的 haproxy （172.20.35.5 、172.20.35.11）  配置相同即可</li>
+</ol>
+<figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">$</span> <span class="string">vim</span> <span class="string">/etc/haproxy/haproxy.cfg</span></span><br><span class="line"><span class="comment">#---------------------------------------------------------------------</span></span><br><span class="line"><span class="comment"># Global settings</span></span><br><span class="line"><span class="comment">#---------------------------------------------------------------------</span></span><br><span class="line"><span class="string">global</span></span><br><span class="line">    <span class="string">log</span>         <span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span> <span class="string">local2</span></span><br><span class="line">    <span class="string">chroot</span>      <span class="string">/var/lib/haproxy</span></span><br><span class="line">    <span class="string">pidfile</span>     <span class="string">/var/run/haproxy.pid</span></span><br><span class="line">    <span class="string">maxconn</span>     <span class="number">4000</span></span><br><span class="line">    <span class="string">user</span>        <span class="string">haproxy</span></span><br><span class="line">    <span class="string">group</span>       <span class="string">haproxy</span></span><br><span class="line">    <span class="string">quiet</span></span><br><span class="line">    <span class="string">nbproc</span>	<span class="number">1</span></span><br><span class="line">    <span class="string">daemon</span></span><br><span class="line">    <span class="string">stats</span> <span class="string">socket</span> <span class="string">/var/lib/haproxy/stats</span>           <span class="comment">## turn on stats unix socket</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#---------------------------------------------------------------------</span></span><br><span class="line"><span class="comment"># common defaults that all the 'listen' and 'backend' sections will</span></span><br><span class="line"><span class="comment"># use if not designated in their block</span></span><br><span class="line"><span class="comment">#---------------------------------------------------------------------</span></span><br><span class="line"><span class="string">defaults</span></span><br><span class="line">    <span class="string">mode</span>                    <span class="string">http</span></span><br><span class="line">    <span class="string">log</span>                     <span class="string">global</span></span><br><span class="line">    <span class="string">option</span>                  <span class="string">httplog</span></span><br><span class="line">    <span class="string">option</span>                  <span class="string">dontlognull</span></span><br><span class="line">    <span class="string">option</span> <span class="string">http-server-close</span>                      <span class="comment">## 后端为动态应用程序建议使用http-server-close，后端为静态建议使用http-keep-alive </span></span><br><span class="line">    <span class="string">option</span> <span class="string">forwardfor</span>       <span class="string">except</span> <span class="number">127.0</span><span class="number">.0</span><span class="number">.0</span><span class="string">/8</span>    <span class="comment">## 如果后端服务器需要获得客户端的真实ip，需要配置的参数，记录客户端IP在X-Forwarded-For头域中</span></span><br><span class="line">    <span class="string">option</span>                  <span class="string">redispatch</span></span><br><span class="line">    <span class="string">retries</span>                 <span class="number">3</span></span><br><span class="line">    <span class="string">timeout</span> <span class="string">http-request</span>    <span class="number">30</span><span class="string">s</span>                   <span class="comment">## 从连接创建开始到从客户端读取完整HTTP请求的超时时间，用于避免类DoS攻击</span></span><br><span class="line">    <span class="string">timeout</span> <span class="string">queue</span>           <span class="number">1</span><span class="string">m</span>                    <span class="comment">## 请求在队列中排隊的最大时长</span></span><br><span class="line">    <span class="string">timeout</span> <span class="string">connect</span>         <span class="number">30</span><span class="string">s</span>                   <span class="comment">## haproxy和服务端建立连接的最大时长，设置为1秒就足够了。局域网内建立连接一般都是瞬间的</span></span><br><span class="line">    <span class="string">timeout</span> <span class="string">client</span>          <span class="number">1</span><span class="string">m</span>                    <span class="comment">## 和客户端保持空闲连接的超时时长，在高并发下可稍微短一点，可设置为10秒以尽快释放连接</span></span><br><span class="line">    <span class="string">timeout</span> <span class="string">server</span>          <span class="number">1</span><span class="string">m</span>                    <span class="comment">## 和服务端保持空闲连接的超时时长，局域网内建立连接很快，所以尽量设置短一些，特别是并发时，如设置为1-3秒    </span></span><br><span class="line">    <span class="string">timeout</span> <span class="string">http-keep-alive</span> <span class="number">30</span><span class="string">s</span></span><br><span class="line">    <span class="string">timeout</span> <span class="string">check</span>           <span class="number">30</span><span class="string">s</span></span><br><span class="line">    <span class="string">maxconn</span>                 <span class="number">3000</span></span><br><span class="line"><span class="comment">########统计页面配置########</span></span><br><span class="line"><span class="string">listen</span> <span class="string">status</span> </span><br><span class="line">	<span class="string">bind</span> <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span><span class="string">:9999</span></span><br><span class="line">	<span class="string">mode</span> <span class="string">http</span></span><br><span class="line">        <span class="string">option</span> <span class="string">httplog</span></span><br><span class="line">	<span class="string">option</span> <span class="string">dontlognull</span></span><br><span class="line">        <span class="string">option</span> <span class="string">logasap</span></span><br><span class="line">	<span class="string">option</span> <span class="string">forwardfor</span></span><br><span class="line">        <span class="string">option</span> <span class="string">httpclose</span></span><br><span class="line">	<span class="string">stats</span> <span class="string">enable</span></span><br><span class="line">        <span class="string">stats</span> <span class="string">uri</span> <span class="string">/status</span>                           <span class="comment">## 访问监控页面的uri</span></span><br><span class="line">	<span class="string">stats</span> <span class="string">auth</span> <span class="attr">iflytek:iflytek</span></span><br><span class="line">        <span class="string">stats</span> <span class="string">realm</span> <span class="string">(Haproxy\</span> <span class="string">statistic)</span></span><br><span class="line"></span><br><span class="line"><span class="comment">########后端访问机器配置#######   ## 一共 10 台机器，我们访问图形化的工具使用的是 4000 端口</span></span><br><span class="line"><span class="string">listen</span> <span class="string">nomachine</span></span><br><span class="line"><span class="string">bind</span> <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span><span class="string">:4000</span></span><br><span class="line"><span class="string">balance</span> <span class="string">leastconn</span>                                   <span class="comment">## 选择使用人数最少的机器进行连接</span></span><br><span class="line"><span class="string">mode</span>   <span class="string">tcp</span></span><br><span class="line"></span><br><span class="line"><span class="string">server</span> <span class="string">nomachine5</span> <span class="number">172.20</span><span class="number">.9</span><span class="number">.5</span><span class="string">:4000</span> <span class="string">check</span> <span class="string">inter</span> <span class="number">5000</span> <span class="string">fall</span> <span class="number">3</span> </span><br><span class="line"><span class="string">server</span> <span class="string">nomachine6</span> <span class="number">172.20</span><span class="number">.9</span><span class="number">.6</span><span class="string">:4000</span> <span class="string">check</span> <span class="string">inter</span> <span class="number">5000</span> <span class="string">fall</span> <span class="number">3</span> </span><br><span class="line"><span class="string">server</span> <span class="string">nomachine17</span> <span class="number">172.20</span><span class="number">.9</span><span class="number">.17</span><span class="string">:4000</span> <span class="string">check</span> <span class="string">inter</span> <span class="number">5000</span> <span class="string">fall</span> <span class="number">3</span> </span><br><span class="line"><span class="string">server</span> <span class="string">nomachine22</span> <span class="number">172.20</span><span class="number">.9</span><span class="number">.22</span><span class="string">:4000</span> <span class="string">check</span> <span class="string">inter</span> <span class="number">5000</span> <span class="string">fall</span> <span class="number">3</span> </span><br><span class="line"><span class="string">server</span> <span class="string">nomachine23</span> <span class="number">172.20</span><span class="number">.9</span><span class="number">.23</span><span class="string">:4000</span> <span class="string">check</span> <span class="string">inter</span> <span class="number">5000</span> <span class="string">fall</span> <span class="number">3</span> </span><br><span class="line"><span class="string">server</span> <span class="string">nomachine24</span> <span class="number">172.20</span><span class="number">.9</span><span class="number">.24</span><span class="string">:4000</span> <span class="string">check</span> <span class="string">inter</span> <span class="number">5000</span> <span class="string">fall</span> <span class="number">3</span> </span><br><span class="line"><span class="string">server</span> <span class="string">nomachine13</span> <span class="number">172.20</span><span class="number">.9</span><span class="number">.13</span><span class="string">:4000</span> <span class="string">check</span> <span class="string">inter</span> <span class="number">5000</span> <span class="string">fall</span> <span class="number">3</span> </span><br><span class="line"><span class="string">server</span> <span class="string">nomachine8</span>  <span class="number">172.20</span><span class="number">.9</span><span class="number">.8</span><span class="string">:4000</span> <span class="string">check</span> <span class="string">inter</span> <span class="number">5000</span> <span class="string">fall</span> <span class="number">3</span> </span><br><span class="line"><span class="string">server</span> <span class="string">nomachine28</span> <span class="number">172.20</span><span class="number">.9</span><span class="number">.28</span><span class="string">:4000</span> <span class="string">check</span> <span class="string">inter</span> <span class="number">5000</span> <span class="string">fall</span> <span class="number">3</span> </span><br><span class="line"><span class="string">server</span> <span class="string">nomachine15</span> <span class="number">172.20</span><span class="number">.9</span><span class="number">.15</span><span class="string">:4000</span> <span class="string">check</span> <span class="string">inter</span> <span class="number">5000</span> <span class="string">fall</span> <span class="number">3</span></span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li><p>haproxy 配置完成验证 ，从结果可看到 两台机器的 4000 端口都可以按照规则转发到后端的机器上。</p>
+<blockquote>
+<p>这里要想看效果，需要提前在后端的 10 台机器配置 httpd 服务并配置index 页面，这里省略。</p>
+</blockquote>
+</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> curl 172.20.35.5:4000</span><br><span class="line">this is nomachine5</span><br><span class="line"><span class="meta">$</span> curl 172.20.35.5:4000</span><br><span class="line">this is nomachine6</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">$</span> curl 172.20.35.11:4000</span><br><span class="line">this is nomachine22</span><br><span class="line"><span class="meta">$</span> curl 172.20.35.11:4000</span><br><span class="line">this is nomachine23</span><br></pre></td></tr></table></figure>
+<h2 id="三、单-VIP-keepalived-部署"><a href="#三、单-VIP-keepalived-部署" class="headerlink" title="三、单 VIP keepalived 部署"></a>三、单 VIP keepalived 部署</h2><ol>
+<li><p><strong>Master</strong>   keepalived  配置</p>
+<figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">$</span> <span class="string">vim</span> <span class="string">/etc/keepalived/keepalived.conf</span></span><br><span class="line"><span class="string">!</span> <span class="string">Configuration</span> <span class="string">File</span> <span class="string">for</span> <span class="string">keepalived</span></span><br><span class="line"></span><br><span class="line"><span class="string">global_defs</span> <span class="string">&#123;</span></span><br><span class="line">   <span class="string">notification_email</span> <span class="string">&#123;</span></span><br><span class="line">     <span class="string">acassen@firewall.loc</span></span><br><span class="line">   <span class="string">&#125;</span></span><br><span class="line">   <span class="string">notification_email_from</span> <span class="string">Alexandre.Cassen@firewall.loc</span></span><br><span class="line">   <span class="string">smtp_server</span> <span class="number">192.168</span><span class="number">.200</span><span class="number">.1</span></span><br><span class="line">   <span class="string">smtp_connect_timeout</span> <span class="number">30</span></span><br><span class="line">   <span class="string">router_id</span> <span class="string">LVS_DEVEL</span></span><br><span class="line"><span class="string">&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="string">vrrp_script</span> <span class="string">chk_haproxy</span> <span class="string">&#123;</span></span><br><span class="line">	<span class="string">script</span> <span class="string">"/etc/keepalived/chk_haproxy.sh"</span>      <span class="comment">## 自定义服务检测脚本位置</span></span><br><span class="line">	<span class="string">interval</span> <span class="number">4</span></span><br><span class="line">	<span class="string">weight</span> <span class="bullet">-50</span>                                   <span class="comment">## 当脚本返回值为复数时对 priority 做加法，如果 weight 是负数，priority 会越来与越小，小于 backup 的 priority 时 ，vip 会漂移过去。</span></span><br><span class="line">	<span class="string">&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="string">vrrp_instance</span> <span class="string">VI_1</span> <span class="string">&#123;</span></span><br><span class="line">    <span class="string">state</span> <span class="string">MASTER</span></span><br><span class="line">    <span class="string">interface</span> <span class="string">eth0</span></span><br><span class="line">    <span class="string">virtual_router_id</span> <span class="number">55</span>                         <span class="comment">## 在同一网段下，master 和 backup 必须相同，且不和其他机器冲突。</span></span><br><span class="line">    <span class="string">priority</span> <span class="number">200</span>                                 <span class="comment">## 决定谁拿 vip</span></span><br><span class="line">    <span class="string">advert_int</span> <span class="number">1</span></span><br><span class="line">    <span class="string">authentication</span> <span class="string">&#123;</span></span><br><span class="line">        <span class="string">auth_type</span> <span class="string">PASS</span></span><br><span class="line">        <span class="string">auth_pass</span> <span class="number">8888</span></span><br><span class="line">    <span class="string">&#125;</span></span><br><span class="line">    <span class="string">virtual_ipaddress</span> <span class="string">&#123;</span></span><br><span class="line">        <span class="number">172.20</span><span class="number">.22</span><span class="number">.230</span>                            <span class="comment">## 虚拟IP 地址</span></span><br><span class="line">    <span class="string">&#125;</span></span><br><span class="line"><span class="string">&#125;</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p><strong>Backup</strong> keepalived  配置</p>
+<figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">$</span> <span class="string">vim</span> <span class="string">/etc/keepalived/keepalived.conf</span></span><br><span class="line"><span class="string">!</span> <span class="string">Configuration</span> <span class="string">File</span> <span class="string">for</span> <span class="string">keepalived</span></span><br><span class="line"></span><br><span class="line"><span class="string">global_defs</span> <span class="string">&#123;</span></span><br><span class="line">   <span class="string">notification_email</span> <span class="string">&#123;</span></span><br><span class="line">     <span class="string">acassen@firewall.loc</span></span><br><span class="line">   <span class="string">&#125;</span></span><br><span class="line">   <span class="string">notification_email_from</span> <span class="string">Alexandre.Cassen@firewall.loc</span></span><br><span class="line">   <span class="string">smtp_server</span> <span class="number">192.168</span><span class="number">.200</span><span class="number">.1</span></span><br><span class="line">   <span class="string">smtp_connect_timeout</span> <span class="number">30</span></span><br><span class="line">   <span class="string">router_id</span> <span class="string">LVS_DEVEL</span></span><br><span class="line"><span class="string">&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="string">vrrp_script</span> <span class="string">chk_haproxy</span> <span class="string">&#123;</span></span><br><span class="line">	<span class="string">script</span> <span class="string">"/etc/keepalived/chk_haproxy.sh"</span></span><br><span class="line">	<span class="string">interval</span> <span class="number">4</span></span><br><span class="line">	<span class="string">weight</span> <span class="bullet">-50</span></span><br><span class="line">	<span class="string">&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="string">vrrp_instance</span> <span class="string">VI_1</span> <span class="string">&#123;</span></span><br><span class="line">    <span class="string">state</span> <span class="string">BACKUP</span></span><br><span class="line">    <span class="string">interface</span> <span class="string">eth0</span></span><br><span class="line">    <span class="string">virtual_router_id</span> <span class="number">55</span>                         <span class="comment">## 必须和 master 的一致</span></span><br><span class="line">    <span class="string">priority</span> <span class="number">50</span>                                  <span class="comment">## 如果这个值高于 200 会抢来vip，如果相等，master 持有vip</span></span><br><span class="line">    <span class="string">advert_int</span> <span class="number">1</span></span><br><span class="line">    <span class="string">authentication</span> <span class="string">&#123;</span></span><br><span class="line">        <span class="string">auth_type</span> <span class="string">PASS</span></span><br><span class="line">        <span class="string">auth_pass</span> <span class="number">8888</span></span><br><span class="line">    <span class="string">&#125;</span></span><br><span class="line">        <span class="string">track_script</span> <span class="string">&#123;</span></span><br><span class="line">	<span class="string">chk_haproxy</span></span><br><span class="line">	<span class="string">&#125;</span></span><br><span class="line">    <span class="string">virtual_ipaddress</span> <span class="string">&#123;</span></span><br><span class="line">        <span class="number">172.20</span><span class="number">.22</span><span class="number">.230</span></span><br><span class="line">    <span class="string">&#125;</span></span><br><span class="line"><span class="string">&#125;</span></span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h2 id="四、双-VIP-keepalived-部署"><a href="#四、双-VIP-keepalived-部署" class="headerlink" title="四、双 VIP keepalived 部署"></a>四、双 VIP keepalived 部署</h2><p>双 VIP 其实就是双主模式，这里没有谁是绝对的 master 或者 backup，两个机器互相都是 master 和 backup。</p>
+<ol>
+<li><p><strong>230 Master</strong> keepalived  配置</p>
+<figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">$</span> <span class="string">vim</span> <span class="string">/etc/keepalived/keepalived.conf</span></span><br><span class="line"><span class="string">!</span> <span class="string">Configuration</span> <span class="string">File</span> <span class="string">for</span> <span class="string">keepalived</span></span><br><span class="line"></span><br><span class="line"><span class="string">global_defs</span> <span class="string">&#123;</span></span><br><span class="line">   <span class="string">notification_email</span> <span class="string">&#123;</span></span><br><span class="line">     <span class="string">acassen@firewall.loc</span></span><br><span class="line">   <span class="string">&#125;</span></span><br><span class="line">   <span class="string">notification_email_from</span> <span class="string">Alexandre.Cassen@firewall.loc</span></span><br><span class="line">   <span class="string">smtp_server</span> <span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span></span><br><span class="line">   <span class="string">smtp_connect_timeout</span> <span class="number">30</span></span><br><span class="line">   <span class="string">router_id</span> <span class="string">LVS_DEVEL</span></span><br><span class="line"><span class="string">&#125;</span></span><br><span class="line">  </span><br><span class="line"><span class="string">vrrp_script</span> <span class="string">chk_haproxy</span> <span class="string">&#123;</span></span><br><span class="line">	<span class="string">script</span> <span class="string">"/etc/keepalived/chk_haproxy.sh"</span></span><br><span class="line">	<span class="string">interval</span> <span class="number">4</span></span><br><span class="line">	<span class="string">weight</span> <span class="bullet">-50</span></span><br><span class="line">	<span class="string">&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="string">vrrp_instance</span> <span class="string">VI_1</span> <span class="string">&#123;</span></span><br><span class="line">    <span class="string">state</span> <span class="string">MASTER</span></span><br><span class="line">    <span class="string">interface</span> <span class="string">eth0</span></span><br><span class="line">    <span class="string">virtual_router_id</span> <span class="number">55</span>                    <span class="comment">## 这里和另一太机器的BACKUP 要一致</span></span><br><span class="line">    <span class="string">priority</span> <span class="number">200</span></span><br><span class="line">    <span class="string">nopreempt</span></span><br><span class="line">    <span class="string">advert_int</span> <span class="number">1</span></span><br><span class="line">    <span class="string">authentication</span> <span class="string">&#123;</span></span><br><span class="line">        <span class="string">auth_type</span> <span class="string">PASS</span></span><br><span class="line">        <span class="string">auth_pass</span> <span class="number">8888</span></span><br><span class="line">    <span class="string">&#125;</span></span><br><span class="line">    <span class="string">virtual_ipaddress</span> <span class="string">&#123;</span></span><br><span class="line">        <span class="number">172.20</span><span class="number">.22</span><span class="number">.230</span></span><br><span class="line">    <span class="string">&#125;</span></span><br><span class="line"><span class="string">&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="string">vrrp_instance</span> <span class="string">VI_2</span> <span class="string">&#123;</span></span><br><span class="line">    <span class="string">state</span> <span class="string">BACKUP</span></span><br><span class="line">    <span class="string">interface</span> <span class="string">eth0</span></span><br><span class="line">    <span class="string">virtual_router_id</span> <span class="number">56</span>                   <span class="comment">## 这里同样和另一太机器的MASTER 要一致,并且和上面不同</span></span><br><span class="line">    <span class="string">priority</span> <span class="number">100</span></span><br><span class="line">    <span class="string">advert_int</span> <span class="number">1</span></span><br><span class="line">    <span class="string">authentication</span> <span class="string">&#123;</span></span><br><span class="line">        <span class="string">auth_type</span> <span class="string">PASS</span></span><br><span class="line">        <span class="string">auth_pass</span> <span class="number">8888</span></span><br><span class="line">    <span class="string">&#125;</span></span><br><span class="line">    <span class="string">virtual_ipaddress</span> <span class="string">&#123;</span></span><br><span class="line">        <span class="number">172.20</span><span class="number">.22</span><span class="number">.231</span></span><br><span class="line">    <span class="string">&#125;</span></span><br><span class="line"><span class="string">&#125;</span></span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol start="2">
+<li><p><strong>231 Master</strong> keepalived  配置</p>
+<figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">$</span> <span class="string">vim</span> <span class="string">/etc/keepalived/keepalived.conf</span></span><br><span class="line"><span class="string">!</span> <span class="string">Configuration</span> <span class="string">File</span> <span class="string">for</span> <span class="string">keepalived</span></span><br><span class="line"></span><br><span class="line"><span class="string">global_defs</span> <span class="string">&#123;</span></span><br><span class="line">   <span class="string">notification_email</span> <span class="string">&#123;</span></span><br><span class="line">     <span class="string">acassen@firewall.loc</span></span><br><span class="line">   <span class="string">&#125;</span></span><br><span class="line">   <span class="string">notification_email_from</span> <span class="string">Alexandre.Cassen@firewall.loc</span></span><br><span class="line">   <span class="string">smtp_server</span> <span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span></span><br><span class="line">   <span class="string">smtp_connect_timeout</span> <span class="number">30</span></span><br><span class="line">   <span class="string">router_id</span> <span class="string">LVS_DEVEL</span></span><br><span class="line"><span class="string">&#125;</span></span><br><span class="line">  </span><br><span class="line"><span class="string">vrrp_script</span> <span class="string">chk_haproxy</span> <span class="string">&#123;</span></span><br><span class="line">	<span class="string">script</span> <span class="string">"/etc/keepalived/chk_haproxy.sh"</span></span><br><span class="line">	<span class="string">interval</span> <span class="number">4</span></span><br><span class="line">	<span class="string">weight</span> <span class="bullet">-50</span></span><br><span class="line">	<span class="string">&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="string">vrrp_instance</span> <span class="string">VI_1</span> <span class="string">&#123;</span></span><br><span class="line">    <span class="string">state</span> <span class="string">BACKUP</span></span><br><span class="line">    <span class="string">interface</span> <span class="string">eth0</span></span><br><span class="line">    <span class="string">virtual_router_id</span> <span class="number">55</span></span><br><span class="line">    <span class="string">priority</span> <span class="number">100</span></span><br><span class="line">    <span class="string">advert_int</span> <span class="number">1</span></span><br><span class="line">    <span class="string">authentication</span> <span class="string">&#123;</span></span><br><span class="line">        <span class="string">auth_type</span> <span class="string">PASS</span></span><br><span class="line">        <span class="string">auth_pass</span> <span class="number">8888</span></span><br><span class="line">    <span class="string">&#125;</span></span><br><span class="line">    <span class="string">virtual_ipaddress</span> <span class="string">&#123;</span></span><br><span class="line">        <span class="number">172.20</span><span class="number">.22</span><span class="number">.231</span></span><br><span class="line">    <span class="string">&#125;</span></span><br><span class="line"><span class="string">&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="string">vrrp_instance</span> <span class="string">VI_2</span> <span class="string">&#123;</span></span><br><span class="line">    <span class="string">state</span> <span class="string">MASTER</span></span><br><span class="line">    <span class="string">interface</span> <span class="string">eth0</span></span><br><span class="line">    <span class="string">virtual_router_id</span> <span class="number">56</span></span><br><span class="line">    <span class="string">priority</span> <span class="number">200</span></span><br><span class="line">    <span class="string">advert_int</span> <span class="number">1</span></span><br><span class="line">    <span class="string">nopreempt</span></span><br><span class="line">    <span class="string">authentication</span> <span class="string">&#123;</span></span><br><span class="line">        <span class="string">auth_type</span> <span class="string">PASS</span></span><br><span class="line">        <span class="string">auth_pass</span> <span class="number">8888</span></span><br><span class="line">    <span class="string">&#125;</span></span><br><span class="line">    <span class="string">virtual_ipaddress</span> <span class="string">&#123;</span></span><br><span class="line">        <span class="number">172.20</span><span class="number">.22</span><span class="number">.230</span></span><br><span class="line">    <span class="string">&#125;</span></span><br><span class="line"><span class="string">&#125;</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>检验 vip 漂移情况</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span># 在 172.20.35.5 上执行</span><br><span class="line"><span class="meta">$</span> systemctl stop keepalived</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span># 在 172.20.35.11 上执行，可以看到 35.5 上的vip 已经漂移过来了</span><br><span class="line"><span class="meta">$</span> ip a</span><br><span class="line">1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536 qdisc noqueue state UNKNOWN </span><br><span class="line">    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00</span><br><span class="line">    inet 127.0.0.1/8 scope host lo</span><br><span class="line">    inet6 ::1/128 scope host </span><br><span class="line">       valid_lft forever preferred_lft forever</span><br><span class="line">2: eth0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc pfifo_fast state UP qlen 1000</span><br><span class="line">    link/ether 00:0c:29:ba:cf:32 brd ff:ff:ff:ff:ff:ff</span><br><span class="line">    inet 172.20.35.11/24 brd 192.168.63.255 scope global eth0</span><br><span class="line">    inet6 fe80::20c:29ff:feba:cf32/64 scope link </span><br><span class="line">        valid_lft forever preferred_lft forever</span><br><span class="line">    inet 172.20.35.230/24 brd 192.168.63.255 scope global eth0</span><br><span class="line">    	valid_lft forever preferred_lft forever  </span><br><span class="line">    inet 172.20.35.231/24 brd 192.168.63.255 scope global eth0</span><br><span class="line">    	valid_lft forever preferred_lft forever</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h2 id="五、keepalived-脚本案例"><a href="#五、keepalived-脚本案例" class="headerlink" title="五、keepalived 脚本案例"></a>五、keepalived 脚本案例</h2><ol>
+<li><p>haproxy 服务不能启动就关闭keepalived 服务</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span>!/bin/sh</span><br><span class="line">if [ $(ps -ef |grep "haproxy" grep v 11 grep11 |grep v "chk" |wc -1) -eq 0 ] ; then</span><br><span class="line"><span class="meta">	#</span>/usr/bin/systemctl restart haproxy</span><br><span class="line">	echo 11/usr/bin/systemctl restart haproxy" &gt; /etc/keepalived/123</span><br><span class="line">	fi</span><br><span class="line">	sleep 3</span><br><span class="line">if [ $(ps ef|grep "haproxy" |grep v "grep" |grep v "chk"|wc -1) -eq 0 ]; then</span><br><span class="line">	/usr/bin/systemctl stop keepalived</span><br><span class="line">fi</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>只是根据 haproxy 服务 情况 返回 0/1，适合haproxy 可以自己恢复的情况。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span>!/bin/bash</span><br><span class="line">count = `ps aux | grep -v grep | grep haproxy | wc -l`</span><br><span class="line">if [ $count &gt; 0 ]; then</span><br><span class="line">    exit 0</span><br><span class="line">else</span><br><span class="line">    exit 1</span><br><span class="line">fi</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h2 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章"></a>参考文章</h2><ul>
+<li><a href="https://www.cnblogs.com/arjenlee/p/9258188.html" target="_blank" rel="noopener">keepalived 之 vrrp_script详解</a></li>
+</ul>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/linux/" rel="tag"><i class="fa fa-tag"></i> linux</a>
+          
+            <a href="/tags/service/" rel="tag"><i class="fa fa-tag"></i> service</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/05/18/17-python-脚本之-subprocess-模块/" rel="next" title="python 脚本之 subprocess 模块">
+                <i class="fa fa-chevron-left"></i> python 脚本之 subprocess 模块
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/icon.jpg" alt="Tomoku">
+            
+              <p class="site-author-name" itemprop="name">Tomoku</p>
+              <div class="site-description motion-element" itemprop="description">勿忘初心</div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">16</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  
+                    
+                      <a href="/tags/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">16</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+            <div class="links-of-author motion-element">
+              
+                <span class="links-of-author-item">
+                  
+                  
+                    
+                  
+                  
+                    
+                  
+                  <a href="https://github.com/Tomoku-dm" title="GitHub &rarr; https://github.com/Tomoku-dm" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+                </span>
+              
+                <span class="links-of-author-item">
+                  
+                  
+                    
+                  
+                  
+                    
+                  
+                  <a href="/dm990107744@gmail.com" title="E-Mail &rarr; dm990107744@gmail.com"><i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                </span>
+              
+            </div>
+          
+
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                推荐阅读
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.5isjyx.com/1234" title="http://www.5isjyx.com/1234" rel="noopener" target="_blank">福利网址</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+            
+          
+	 <iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width="298" height="52" src="//music.163.com/outchain/player?type=2&id=409650927&auto=0&height=32"></iframe>
+	  
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#一、前言"><span class="nav-number">1.</span> <span class="nav-text">一、前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#二、安装及相关配置文件"><span class="nav-number">2.</span> <span class="nav-text">二、安装及相关配置文件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#三、Haporxy-配置"><span class="nav-number">3.</span> <span class="nav-text">三、Haporxy 配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#三、单-VIP-keepalived-部署"><span class="nav-number">4.</span> <span class="nav-text">三、单 VIP keepalived 部署</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#四、双-VIP-keepalived-部署"><span class="nav-number">5.</span> <span class="nav-text">四、双 VIP keepalived 部署</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#五、keepalived-脚本案例"><span class="nav-number">6.</span> <span class="nav-text">五、keepalived 脚本案例</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考文章"><span class="nav-number">7.</span> <span class="nav-text">参考文章</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Tomoku</span>
+
+  
+
+  
+</div>
+<!--
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.1.0</div>
+
+
+
+
+-->
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/utils.js?v=7.1.0"></script>
+
+  <script src="/js/motion.js?v=7.1.0"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/affix.js?v=7.1.0"></script>
+
+  <script src="/js/schemes/pisces.js?v=7.1.0"></script>
+
+
+
+
+  
+  <script src="/js/scrollspy.js?v=7.1.0"></script>
+<script src="/js/post-details.js?v=7.1.0"></script>
+
+
+
+  
+
+
+  <script src="/js/next-boot.js?v=7.1.0"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
