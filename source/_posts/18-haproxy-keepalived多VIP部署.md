@@ -15,9 +15,11 @@ tags:
 
 平台使用两台 haproxy 进行负载均衡分配机器，如果配置单 VIP ，两台haproxy 只有一台机器工作，压力有些大。 两台机器部署 keepalived 并且部署双 VIP，保证两台机器同时工作，使用 DNS 做双VIP 的轮询。一台机器宕机后，双 VIP 飘到一个机器上。
 
+流程图如下（图中只花了5个后端server）：
 
+![](https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/18-liuchengtu.jpg)
 
-## 二、安装及相关配置文件
+## 二、软件安装及相关配置文件
 
 ```shell
 $ yum install haproxy
@@ -108,18 +110,18 @@ server nomachine15 172.20.9.15:4000 check inter 5000 fall 3
 
    > 这里要想看效果，需要提前在后端的 10 台机器配置 httpd 服务并配置index 页面，这里省略。
 
-```shell
-$ curl 172.20.35.5:4000
-this is nomachine5
-$ curl 172.20.35.5:4000
-this is nomachine6
-
-
-$ curl 172.20.35.11:4000
-this is nomachine22
-$ curl 172.20.35.11:4000
-this is nomachine23
-```
+    ```shell
+    $ curl 172.20.35.5:4000
+    this is nomachine5
+    $ curl 172.20.35.5:4000
+    this is nomachine6
+    
+    
+    $ curl 172.20.35.11:4000
+    this is nomachine22
+    $ curl 172.20.35.11:4000
+    this is nomachine23
+    ```
 
 ## 三、单 VIP keepalived 部署
 
@@ -280,13 +282,13 @@ this is nomachine23
       smtp_server 127.0.0.1
       smtp_connect_timeout 30
       router_id LVS_DEVEL
-   }
+    }
      
    vrrp_script chk_haproxy {
    	script "/etc/keepalived/chk_haproxy.sh"
    	interval 4
    	weight -50
-   	}
+   }
    
    vrrp_instance VI_1 {
        state BACKUP
@@ -301,7 +303,7 @@ this is nomachine23
        virtual_ipaddress {
            172.20.22.231
        }
-   }
+    }
    
    vrrp_instance VI_2 {
        state MASTER
@@ -317,12 +319,13 @@ this is nomachine23
        virtual_ipaddress {
            172.20.22.230
        }
-   }
-   ```
+    }
+    ```
+    
 
 3. 检验 vip 漂移情况
 
-   ```shell
+   ```yml
    ## 在 172.20.35.5 上执行
    $ systemctl stop keepalived
    
@@ -353,7 +356,7 @@ this is nomachine23
 
 1. haproxy 服务不能启动就关闭keepalived 服务
 
-   ```shell
+   ```yml
    #!/bin/sh
    if [ $(ps -ef |grep "haproxy" grep v 11 grep11 |grep v "chk" |wc -1) -eq 0 ] ; then
    	#/usr/bin/systemctl restart haproxy
@@ -367,7 +370,7 @@ this is nomachine23
 
 2. 只是根据 haproxy 服务 情况 返回 0/1，适合haproxy 可以自己恢复的情况。
 
-   ```shell
+   ```yml
    #!/bin/bash
    count = `ps aux | grep -v grep | grep haproxy | wc -l`
    if [ $count > 0 ]; then
@@ -382,4 +385,3 @@ this is nomachine23
 ## 参考文章
 
 - [keepalived 之 vrrp_script详解](https://www.cnblogs.com/arjenlee/p/9258188.html)
-
