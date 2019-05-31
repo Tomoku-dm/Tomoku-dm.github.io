@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.1.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.1.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.1.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.1.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.1.0" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.1.0',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="一、前言当 linux 系统发生 hung 死，并在日志中能看到 softlockup 、hung_task 等信息时，或者机器自己发生 panic 死机时，我们可以通过配置 kdump 捕获内核转储，然后使用 crash 工具分析内核因为什么 hung 死，并死在哪一个步骤。  kdump 是一种先进的基于 kexec 的内核崩溃转储机制。当系统崩溃时，kdump 使用 kexec 启动到第二个">
+<meta name="keywords" content="kernel,core dump">
+<meta property="og:type" content="article">
+<meta property="og:title" content="linux coredump 分析——信号量及自旋锁">
+<meta property="og:url" content="http://yoursite.com/2019/05/31/15-linux-coredump分析——信号量及自旋锁/index.html">
+<meta property="og:site_name" content="Tomoku&#39;s blog">
+<meta property="og:description" content="一、前言当 linux 系统发生 hung 死，并在日志中能看到 softlockup 、hung_task 等信息时，或者机器自己发生 panic 死机时，我们可以通过配置 kdump 捕获内核转储，然后使用 crash 工具分析内核因为什么 hung 死，并死在哪一个步骤。  kdump 是一种先进的基于 kexec 的内核崩溃转储机制。当系统崩溃时，kdump 使用 kexec 启动到第二个">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/15-kdump.jpg">
+<meta property="og:updated_time" content="2019-05-31T11:55:42.342Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="linux coredump 分析——信号量及自旋锁">
+<meta name="twitter:description" content="一、前言当 linux 系统发生 hung 死，并在日志中能看到 softlockup 、hung_task 等信息时，或者机器自己发生 panic 死机时，我们可以通过配置 kdump 捕获内核转储，然后使用 crash 工具分析内核因为什么 hung 死，并死在哪一个步骤。  kdump 是一种先进的基于 kexec 的内核崩溃转储机制。当系统崩溃时，kdump 使用 kexec 启动到第二个">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/15-kdump.jpg">
+
+
+
+
+
+  
+  
+  <link rel="canonical" href="http://yoursite.com/2019/05/31/15-linux-coredump分析——信号量及自旋锁/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>linux coredump 分析——信号量及自旋锁 | Tomoku's blog</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Tomoku's blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">在学习技术的道路上缓慢爬行</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/05/31/15-linux-coredump分析——信号量及自旋锁/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Tomoku">
+      <meta itemprop="description" content="勿忘初心">
+      <meta itemprop="image" content="/images/icon.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Tomoku's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">linux coredump 分析——信号量及自旋锁
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2019-05-31 19:54:11 / 修改时间：19:55:42" itemprop="dateCreated datePublished" datetime="2019-05-31T19:54:11+08:00">2019-05-31</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="一、前言"><a href="#一、前言" class="headerlink" title="一、前言"></a>一、前言</h2><p>当 linux 系统发生 hung 死，并在日志中能看到 <code>softlockup</code> 、<code>hung_task</code> 等信息时，或者机器自己发生 panic 死机时，我们可以通过配置 kdump 捕获内核转储，然后使用 crash 工具分析内核因为什么 hung 死，并死在哪一个步骤。</p>
+<blockquote>
+<p>kdump 是一种先进的基于 kexec 的内核崩溃转储机制。当系统崩溃时，kdump 使用 kexec 启动到第二个内核。第二个内核通常叫做捕获内核，以很小内存启动以捕获转储镜像。第一个内核保留了内存的一部分给第二内核启动用。由于 kdump 利用 kexec 启动捕获内核，绕过了 BIOS，所以第一个内核的内存得以保留。这是内核崩溃转储的本质。</p>
+</blockquote>
+<p>kdump 工作步骤如下：</p>
+<p><img src="https://raw.githubusercontent.com/Tomoku-dm/blog-images/master/15-kdump.jpg" alt="kdump"></p>
+<h2 id="二、Core-dump-收集"><a href="#二、Core-dump-收集" class="headerlink" title="二、Core dump 收集"></a>二、Core dump 收集</h2><ol>
+<li><p>修改内核参数使其 panic</p>
+ <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> cat /etc/sysctl.conf</span><br><span class="line">kernel.hung_task_panic = 1</span><br><span class="line">kernel.softlockup_panic = 1</span><br><span class="line">kernel.sysrq = 0</span><br><span class="line"></span><br><span class="line"><span class="meta">$</span> sysctl -p</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>安装 kdump ，并设置为第二内核预留的内存</p>
+</li>
+</ol>
+<ul>
+<li><p><strong>Centos6</strong></p>
+  <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> yum install kexec-tools</span><br><span class="line"></span><br><span class="line"><span class="meta">$</span> cat /boot/grub/grub.conf               ## 2G 以上内存设置 auto，2G 以下设置 128M 。配置完需要重启生效</span><br><span class="line">kernel /vmlinuz-2.6.32-431.el6.x86_64 ro root=UUID=638db084-d800-4875-bde8-d065e97799be rd_NO_LUKS rd_NO_LVM LANG=en_US.UTF-8 rd_NO_MD SYSFONT=latarcyrheb-sun16 crashkernel=auto  KEYBOARDTYPE=pc KEYTABLE=us rd_NO_DM rhgb quiet crashkernel=auto</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> cat /sys/kernel/kexec_crash_size            ## 查看 kdump 预留的内存</span><br><span class="line">143654912</span><br><span class="line"></span><br><span class="line"><span class="meta">$</span> chkconfig kdump on &amp;&amp; service kdump start</span><br><span class="line"><span class="meta">$</span> echo c &gt; /proc/sysrq-trigger                ## 模拟panic ，测试是否生成vmcore,默认生成在/var/crash下,希望存到其他存储看参考链接</span><br></pre></td></tr></table></figure>
+</li>
+<li><p><strong>Centos7</strong></p>
+  <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> yum install kexec-tools</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> cat /etc/default/grub           ## 2G 以上内存设置 auto，2G 以下设置 128M 。配置完需要重启生效</span><br><span class="line">GRUB_TIMEOUT=5</span><br><span class="line">GRUB_DISTRIBUTOR="$(sed 's, release .*$,,g' /etc/system-release)"</span><br><span class="line">GRUB_DEFAULT=saved</span><br><span class="line">GRUB_DISABLE_SUBMENU=true</span><br><span class="line">GRUB_TERMINAL_OUTPUT="console"</span><br><span class="line">GRUB_CMDLINE_LINUX="crashkernel=auto rd.lvm.lv=centos/root rd.lvm.lv=centos/swap rhgb quiet crashkernel=auto"</span><br><span class="line">GRUB_DISABLE_RECOVERY="true"</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> cat /sys/kernel/kexec_crash_size            ## 查看 kdump 预留的内存</span><br><span class="line">143654912</span><br><span class="line"></span><br><span class="line"><span class="meta">$</span> systemctl start kdump &amp;&amp; $ systemctl enable kdump</span><br><span class="line"><span class="meta">$</span> echo c &gt; /proc/sysrq-trigger                ## 模拟panic ，测试是否生成vmcore,默认生成在/var/crash下,希望存到其他存储看参考链接</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h2 id="三、vmcore-分析环境部署"><a href="#三、vmcore-分析环境部署" class="headerlink" title="三、vmcore 分析环境部署"></a>三、vmcore 分析环境部署</h2><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> yum -y install crash</span><br><span class="line"><span class="meta">$</span> yum -y install kernel-debuginfo*</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span># 没有debug 的 yum 源可以去下面的链接下载，找当前使用内核对应的版本包</span><br><span class="line"><span class="meta">#</span># http://debuginfo.centos.org/7/x86_64/</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> uname -rsp                          ## 下载debuginfo 包要和vmcore 抓的内核版本统一</span><br><span class="line">Linux 3.10.0-693.el7.x86_64 x86_64</span><br><span class="line"><span class="meta">$</span> wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"><span class="meta">$</span> wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line"><span class="meta">$</span> rpm -ivh kernel-debuginfo-3.10.0-693.el7.x86_64.rpm kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span># 如果需要使用dubuginfo-install 安装其他包需提前安装</span><br><span class="line"><span class="meta">$</span> yum install nss-softokn-debuginfo --nogpgcheck</span><br><span class="line"><span class="meta">$</span> yum install yum-utils</span><br></pre></td></tr></table></figure>
+<p>在分析过程中可能需要查看内核源码，在<a href="http://vault.centos.org/6.5/os/Source/SPackages/" target="_blank" rel="noopener">这里</a>可以下载到 Centos 各种包的源码<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span># 把packName.src.rpm解包，会生成一个.tar.gz或者.tar.bz2的压缩包，那个就是源码</span><br><span class="line"><span class="meta">$</span> rpm2cpio packName.src.rpm | cpio -id</span><br><span class="line"><span class="meta">#</span>#  解压缩源码包</span><br><span class="line"><span class="meta">$</span> tar -jxvf packName.tar.bz(2)</span><br></pre></td></tr></table></figure></p>
+<h2 id="vmcore-分析案例"><a href="#vmcore-分析案例" class="headerlink" title="vmcore 分析案例"></a>vmcore 分析案例</h2><p>下面是一个关于信号量读写锁的 vmcore 分析案例, 本案例相对比较复杂，设计 <code>信号量锁</code> 以及 <code>spinlock 自旋锁</code>，下面我们分两个阶段来进行排查</p>
+<h3 id="信号量锁-阶段"><a href="#信号量锁-阶段" class="headerlink" title="信号量锁 阶段"></a><code>信号量锁</code> 阶段</h3><ol>
+<li><p>首先查看处于 UN 状态的进程数量</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">crash&gt;</span> ps | grep UN | wc -l</span><br><span class="line">94</span><br><span class="line"><span class="meta">crash&gt;</span> ps | grep RU | wc -l</span><br><span class="line">43</span><br><span class="line"><span class="meta">crash&gt;</span> ps | grep IN | wc -l</span><br><span class="line">2468</span><br><span class="line"><span class="meta">crash&gt;</span> ps -u |grep UN</span><br><span class="line">  30413  30364  24  ffff88022e66cae0  UN   0.8 9333496 1128356  java</span><br><span class="line">  30422  30364  23  ffff88022e7b6aa0  UN   0.8 9333496 1128356  java</span><br><span class="line">  30608  30553  28  ffff88039e084040  UN   0.8 9334548 1036756  java</span><br><span class="line">  30681  30553  27  ffff881c3dc8c040  UN   0.8 9334548 1036756  java</span><br><span class="line">  30725  30553   4  ffff8801dc940ae0  UN   0.8 9334548 1036756  java</span><br><span class="line">  30726  30553   9  ffff88039c94a040  UN   0.8 9334548 1036756  java</span><br><span class="line">  30767  30553  28  ffff88022e444aa0  UN   0.8 9334548 1036756  java</span><br><span class="line">  31734      1  27  ffff88039e33e040  UN   0.0       0      0  java</span><br><span class="line">  31735      1  26  ffff881b2ef2c080  UN   0.0       0      0  java</span><br><span class="line">  31736      1  16  ffff881f8e84cae0  UN   0.0       0      0  java</span><br><span class="line">  31738      1   8  ffff881c8c812040  UN   0.0       0      0  java</span><br><span class="line">  ...</span><br><span class="line">  31739      1  13  ffff881d14f10aa0  UN   0.0       0      0  java</span><br><span class="line">  31740      1  24  ffff881c8c812aa0  UN   0.0       0      0  java</span><br><span class="line">  31855      1   5  ffff88066c18e040  UN   0.0       0      0  java</span><br><span class="line">  31856   5427  19  ffff881b18d40040  UN   0.0    6604   3200  pidof</span><br><span class="line">  31858  31857  26  ffff881c87c4e040  UN   0.0  108144    988  ps</span><br><span class="line">  31908  31907   8  ffff882050d65540  UN   0.0  108152   1020  ps</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>选择一个进程 ，可以看到这个进程在等待信号量锁，然后我们找到信号量锁的地址</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span># 选择一个等待信号量锁的进程</span><br><span class="line"><span class="meta">crash&gt;</span> bt 30413</span><br><span class="line">PID: 30413  TASK: ffff88022e66cae0  CPU: 24  COMMAND: "java"</span><br><span class="line"><span class="meta"> #</span>0 [ffff88031bdebd58] schedule at ffffffff815278c2</span><br><span class="line"><span class="meta"> #</span>1 [ffff88031bdebe20] rwsem_down_failed_common at ffffffff81529f85</span><br><span class="line"><span class="meta"> #</span>2 [ffff88031bdebe80] rwsem_down_write_failed at ffffffff8152a0e3</span><br><span class="line"><span class="meta"> #</span>3 [ffff88031bdebec0] call_rwsem_down_write_failed at ffffffff8128e883</span><br><span class="line"><span class="meta"> #</span>4 [ffff88031bdebf20] sys_mprotect at ffffffff81152386</span><br><span class="line"><span class="meta"> #</span>5 [ffff88031bdebf80] system_call_fastpath at ffffffff8100b072</span><br><span class="line">    RIP: 000000303a8e5677  RSP: 00007fb3cd03d3d0  RFLAGS: 00010202</span><br><span class="line">    RAX: 000000000000000a  RBX: ffffffff8100b072  RCX: 0000000000000000</span><br><span class="line">    RDX: 0000000000000001  RSI: 0000000000001000  RDI: 00007fb3e2ce9000</span><br><span class="line">    RBP: 00007fb3cd03d990   R8: 00007fb3e2a99d80   R9: 0000000000000001</span><br><span class="line">    R10: 0000000000000000  R11: 0000000000000206  R12: 00007fb3e2a995e8</span><br><span class="line">    R13: 00007fb3dc0a4000  R14: 00007fb3e2a903b0  R15: 0000000000001000</span><br><span class="line">    ORIG_RAX: 000000000000000a  CS: 0033  SS: 002b</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span># 拿到这个进程 mm.struct 中 信号量锁的地址</span><br><span class="line"><span class="meta">crash&gt;</span> p &amp;((struct task_struct *)0xffff88022e66cae0)-&gt;mm-&gt;mmap_sem</span><br><span class="line"><span class="meta">$</span>5 = (struct rw_semaphore *) 0xffff8805bdec27e8</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>信号量锁的地址找到了，我们先研究一下信号量锁相关的内容</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span># 拿到进程 mm_struct 的地址</span><br><span class="line"><span class="meta">crash&gt;</span> task_struct.mm ffff88022e66cae0</span><br><span class="line">  mm = 0xffff8805bdec2780</span><br><span class="line">  </span><br><span class="line"><span class="meta">#</span># 看看 mm_struct 的 mmap_sem 存放的都是什么</span><br><span class="line"><span class="meta">crash&gt;</span> mm_struct.mmap_sem 0xffff88022e66cae0</span><br><span class="line">  mmap_sem = &#123;</span><br><span class="line">    count = -131932026909888,             ## 这个count 是两个16位计数器 需要计算得知持有锁进程的数量</span><br><span class="line">    wait_lock = &#123;</span><br><span class="line">      raw_lock = &#123;</span><br><span class="line">        slock = 0</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;, </span><br><span class="line">    wait_list = &#123;</span><br><span class="line">      next = 0x81f905286d6, </span><br><span class="line">      prev = 0x57d6bdb</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line"><span class="meta">#</span># 我们也可以直接拿到 count</span><br><span class="line"><span class="meta">crash&gt;</span>  p  (((struct mm_struct *) 0xffff88022e66cae0)-&gt;mmap_sem).count </span><br><span class="line"><span class="meta">$</span>6 = -131932026909888</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span># 我们在mmap_sem 中可以看到有wait_list 队列，那我们看看队列里都有哪些进程在等这个信号量锁</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span># 首先要拿到这些进程 的 父进程</span><br><span class="line"><span class="meta">crash&gt;</span> px ((struct task_struct *)0xffff88022e66cae0)-&gt;mm.owner</span><br><span class="line"><span class="meta">$</span>7 = (struct task_struct *) 0xffff88063f270080</span><br><span class="line"></span><br><span class="line"><span class="meta">crash&gt;</span> px ((struct task_struct *)0xffff88063f270080)-&gt;mm-&gt;mmap_sem</span><br><span class="line"><span class="meta">$</span>8 = &#123;</span><br><span class="line">  count = 0xfffffffd00000001, </span><br><span class="line">  wait_lock = &#123;</span><br><span class="line">    raw_lock = &#123;</span><br><span class="line">      slock = 0x16b016b</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;, </span><br><span class="line">  wait_list = &#123;</span><br><span class="line">    next = 0xffff88031bdebe88, </span><br><span class="line">    prev = 0xffff88039aac7d60</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span># 从下面结果可以看到 一共有三个进程在等</span><br><span class="line"><span class="meta">crash&gt;</span> list -H 0xffff88031bdebe88 -o rwsem_waiter.list -s rwsem_waiter.task </span><br><span class="line">ffff881c8cb0dd80</span><br><span class="line">  task = 0xffff882050d65540</span><br><span class="line">ffff88039aac7d60</span><br><span class="line">  task = 0xffff88022e7b6aa0</span><br><span class="line">ffff8805bdec27f8</span><br><span class="line">  task = 0xcce0cce</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>接下来我们继续，拿到信号量锁结构体的地址，我们就可以查哪个进程拿着这个说没有释放</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span># 通过foreach 遍历所有带这个地址的进程，看哪个进程像</span><br><span class="line"><span class="meta">crash&gt;</span> foreach bt -f  | grep -B60  ffff8805bdec27e8    ## 60 行不够展示的话  适当增加</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span># 从结果中大概有三类进程</span><br><span class="line">PID: 31908  TASK: ffff882050d65540  CPU: 8   COMMAND: "ps"</span><br><span class="line"><span class="meta"> #</span>0 [ffff881c8cb0dc50] schedule at ffffffff815278c2</span><br><span class="line"><span class="meta"> #</span>1 [ffff881c8cb0dd18] rwsem_down_failed_common at ffffffff81529f85</span><br><span class="line"><span class="meta"> #</span>2 [ffff881c8cb0dd78] rwsem_down_read_failed at ffffffff8152a116</span><br><span class="line"><span class="meta"> #</span>3 [ffff881c8cb0ddb8] call_rwsem_down_read_failed at ffffffff8128e854</span><br><span class="line"><span class="meta"> #</span>4 [ffff881c8cb0de20] m_start at ffffffff811f1934</span><br><span class="line"><span class="meta"> #</span>5 [ffff881c8cb0de70] seq_read at ffffffff811add56</span><br><span class="line"><span class="meta"> #</span>6 [ffff881c8cb0def0] vfs_read at ffffffff811896a5</span><br><span class="line"><span class="meta"> #</span>7 [ffff881c8cb0df30] sys_read at ffffffff811897e1</span><br><span class="line"><span class="meta"> #</span>8 [ffff881c8cb0df80] system_call_fastpath at ffffffff8100b072</span><br><span class="line">PID: 30902  TASK: ffff881b693cd540  CPU: 24  COMMAND: "java"</span><br><span class="line"><span class="meta"> #</span>0 [ffff881b18ea5b38] schedule at ffffffff815278c2</span><br><span class="line"><span class="meta"> #</span>1 [ffff881b18ea5c00] futex_wait_queue_me at ffffffff810ae8d9</span><br><span class="line"><span class="meta"> #</span>2 [ffff881b18ea5c40] futex_wait at ffffffff810af9e8</span><br><span class="line"><span class="meta"> #</span>3 [ffff881b18ea5dc0] do_futex at ffffffff810b1151</span><br><span class="line"><span class="meta"> #</span>4 [ffff881b18ea5ef0] sys_futex at ffffffff810b1c0b</span><br><span class="line"><span class="meta"> #</span>5 [ffff881b18ea5f80] system_call_fastpath at ffffffff8100b072</span><br><span class="line">PID: 30388  TASK: ffff88039e30b500  CPU: 20  COMMAND: "java"</span><br><span class="line"><span class="meta"> #</span>0 [ffff880028387e90] crash_nmi_callback at ffffffff8102fee6</span><br><span class="line"><span class="meta"> #</span>1 [ffff880028387ea0] notifier_call_chain at ffffffff8152d515</span><br><span class="line"><span class="meta"> #</span>2 [ffff880028387ee0] atomic_notifier_call_chain at ffffffff8152d57a</span><br><span class="line"><span class="meta"> #</span>3 [ffff880028387ef0] notify_die at ffffffff810a154e</span><br><span class="line"><span class="meta"> #</span>4 [ffff880028387f20] do_nmi at ffffffff8152b1db</span><br><span class="line"><span class="meta"> #</span>5 [ffff880028387f50] nmi at ffffffff8152aaa0</span><br><span class="line">    [exception RIP: _spin_lock_irq+40]</span><br><span class="line">    RIP: ffffffff8152a238  RSP: ffff88049d8b5638  RFLAGS: 00000093</span><br><span class="line">    RAX: 00000000000066ce  RBX: ffff880000022e80  RCX: 0000000000000004</span><br><span class="line">    RDX: 00000000000066cc  RSI: 000000000000000a  RDI: ffff88000002b2c0</span><br><span class="line">    RBP: ffff88049d8b5638   R8: 000000000000000a   R9: 0000000000000000</span><br><span class="line">    R10: 0000000000000000  R11: 0000000000000004  R12: ffffea001a8688b8</span><br><span class="line">    R13: 0000000000000000  R14: ffff8800283931c0  R15: 0040000000020028</span><br><span class="line">    ORIG_RAX: ffffffffffffffff  CS: 0010  SS: 0018</span><br><span class="line">--- &lt;NMI exception stack&gt; ---</span><br><span class="line"><span class="meta"> #</span>6 [ffff88049d8b5638] _spin_lock_irq at ffffffff8152a238</span><br><span class="line"><span class="meta"> #</span>7 [ffff88049d8b5640] ____pagevec_lru_deactivate at ffffffff81136cc8</span><br><span class="line"><span class="meta"> #</span>8 [ffff88049d8b56d0] lru_add_drain at ffffffff81136f68</span><br><span class="line"><span class="meta"> #</span>9 [ffff88049d8b5700] __pagevec_release at ffffffff81136fd6</span><br><span class="line"><span class="meta">#</span>10 [ffff88049d8b5720] invalidate_mapping_pages at ffffffff811375b8</span><br><span class="line"><span class="meta">#</span>11 [ffff88049d8b5810] shrink_icache_memory at ffffffff811a602b</span><br><span class="line"><span class="meta">#</span>12 [ffff88049d8b5870] shrink_slab at ffffffff81138ada</span><br><span class="line"><span class="meta">#</span>13 [ffff88049d8b58d0] zone_reclaim at ffffffff8113b6de</span><br><span class="line"><span class="meta">#</span>14 [ffff88049d8b59f0] get_page_from_freelist at ffffffff8112d83c</span><br><span class="line"><span class="meta">#</span>15 [ffff88049d8b5b20] __alloc_pages_nodemask at ffffffff8112f3a3</span><br><span class="line"><span class="meta">#</span>16 [ffff88049d8b5c60] alloc_pages_vma at ffffffff81167b9a</span><br><span class="line"><span class="meta">#</span>17 [ffff88049d8b5cb0] handle_pte_fault at ffffffff8114ac9d</span><br><span class="line"><span class="meta">#</span>18 [ffff88049d8b5d90] handle_mm_fault at ffffffff8114b28a</span><br><span class="line"><span class="meta">#</span>19 [ffff88049d8b5e00] __do_page_fault at ffffffff8104a8d8</span><br><span class="line"><span class="meta">#</span>20 [ffff88049d8b5f20] do_page_fault at ffffffff8152d45e</span><br><span class="line"><span class="meta">#</span>21 [ffff88049d8b5f50] page_fault at ffffffff8152a815</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span># 前两种是没有拿到锁的，do_futex 后面 调用了 futex_wait 可知发生了信号量锁互斥。最后一个在 __do_page_fault 中拿锁，然后卡在 _spin_lock_irq 上了。</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h3 id="自旋锁阶段"><a href="#自旋锁阶段" class="headerlink" title="自旋锁阶段"></a><code>自旋锁</code>阶段</h3><p>接下来我们就分析 PID: 30388 进程 为什么没有拿到 spinlock 。</p>
+<p>通常来说，对于类似的死锁问题分析，都会有这种思路：死锁，那就肯定有进程持有相应的锁而一直不释放，导致本进程一直获取不到锁。那就需要寻找持有锁的进程了.</p>
+<p>持有该锁的进程可能处于如下几种状态(按可能性大小排列)：</p>
+<ol>
+<li>处于RUNNING状态，且正在其它某CPU上运行。</li>
+<li>处于RUNNING状态，但暂时没有得到调度运行。</li>
+<li>处于D状态，等待某任务完成。</li>
+<li>处于S状态</li>
+<li>已经运行结束，进程已经不存在。</li>
+</ol>
+<p>最可能的肯定是1、2、3。 4 和 5  属于明显的内核bug，对于 3 和 4来说，因为<code>spinlock</code>持有者是不能sleep的，内核中对于持有<code>spinlock</code>再进行 sleep 的情况应该有判断和告警；对于5来说，那就是有进程持有<code>spinlock</code>锁，但没有释放就退出了(比如某些异常分支)，相当于泄露，这种情况内核中有静态代码检查工具，对于一般的用户态程序这种错误可能容易出现，但内核中这种可能性也极小。</p>
+<p>照这种思路，分析过程大致为：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line">bt 30388</span><br><span class="line"><span class="meta"> #</span>6 [ffff88049d8b5638] _spin_lock_irq at ffffffff8152a238</span><br><span class="line"><span class="meta"> #</span>7 [ffff88049d8b5640] ____pagevec_lru_deactivate at ffffffff81136cc8</span><br><span class="line"><span class="meta"> #</span>8 [ffff88049d8b56d0] lru_add_drain at ffffffff81136f68</span><br><span class="line"> </span><br><span class="line"><span class="meta">crash&gt;</span> dis -l  ____pagevec_lru_deactivate</span><br><span class="line"><span class="meta">#</span># rdi 是 传入的参数  spinlock</span><br><span class="line"></span><br><span class="line"><span class="meta">crash&gt;</span> spinlock_t ffff88000002b2c0</span><br><span class="line">struct spinlock_t &#123;</span><br><span class="line">  raw_lock = &#123;</span><br><span class="line">    slock = 1725195980</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">crash&gt;</span> eval 1725195980</span><br><span class="line">hexadecimal: 66d466cc  </span><br><span class="line">    decimal: 1725195980  </span><br><span class="line">      octal: 14665063314</span><br><span class="line">     binary: 0000000000000000000000000000000001100110110101000110011011001100</span><br><span class="line"><span class="meta">#</span># 4 字节的lock分成两部分：</span><br><span class="line"><span class="meta">#</span># Next(2字节)|Owner(2字节)</span><br><span class="line"><span class="meta">#</span># 0110011011010100    20</span><br><span class="line"><span class="meta">#</span># 0110011011001100    12     说明有8 个在等锁</span><br><span class="line"></span><br><span class="line">bt -a   看到 cpu 上除了swapper 就是 等自旋锁</span><br><span class="line">PID: 1514   TASK: ffff88066065a040  CPU: 15  COMMAND: "java"</span><br><span class="line">PID: 1468   TASK: ffff8805d96c6aa0  CPU: 19  COMMAND: "java"</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span># 看 spinlock 到哪一步了</span><br><span class="line">dis -l ffffffff8152a238</span><br><span class="line"><span class="meta">crash&gt;</span> dis -l  ffffffff8152a238</span><br><span class="line">/usr/src/debug/kernel-2.6.32-431.el6/linux-2.6.32-431.el6.x86_64/arch/x86/include/asm/spinlock.h: 127</span><br><span class="line">0xffffffff8152a238 &lt;_spin_lock_irq+40&gt;: jmp    0xffffffff8152a22f &lt;_spin_lock_irq+31&gt;</span><br><span class="line"><span class="meta">crash&gt;</span> l /usr/src/debug/kernel-2.6.32-431.el6/linux-2.6.32-431.el6.x86_64/arch/x86/include/asm/spinlock.h: 127</span><br><span class="line">122     static __always_inline void __ticket_spin_lock(raw_spinlock_t *lock)</span><br><span class="line">123     &#123;</span><br><span class="line">124             int inc;</span><br><span class="line">125             int tmp;</span><br><span class="line">126     </span><br><span class="line">127             asm volatile("1:\t\n"</span><br><span class="line">128                          "mov $0x10000, %0\n\t"</span><br><span class="line">129                          LOCK_PREFIX "xaddl %0, %1\n"</span><br><span class="line">130                          "movzwl %w0, %2\n\t"</span><br><span class="line">131                          "shrl $16, %0\n\t"</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span># 看哪里调用的 这个spinlock  会不有又被人同时加锁</span><br><span class="line">dis -l ffffffff81136cc8</span><br></pre></td></tr></table></figure>
+<p>下面为什么没有了？？？   因为看不懂了。。。</p>
+<h2 id="crash-常用命令"><a href="#crash-常用命令" class="headerlink" title="crash 常用命令"></a>crash 常用命令</h2><ul>
+<li>crash /</li>
+<li>bt TAKSID</li>
+<li>dis -rl  taskID</li>
+<li>ps </li>
+<li>set</li>
+<li>foreach bt -f </li>
+<li>sys</li>
+<li>kmem -i</li>
+</ul>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><ul>
+<li><a href="https://access.redhat.com/zh_CN/solutions/667083" target="_blank" rel="noopener">RedHat: 如何使用 kdump 服务来分析内核崩溃，系统挂起，系统重启？</a></li>
+<li><a href="https://access.redhat.com/solutions/916043" target="_blank" rel="noopener">RedHat: How should the crashkernel parameter be configured for using kdump on RHEL7?</a></li>
+<li><a href="https://www.ibm.com/developerworks/cn/linux/l-cn-kdump1/index.html" target="_blank" rel="noopener">IBM: 深入探索 Kdump</a></li>
+<li><a href="https://blog.csdn.net/juS3Ve/article/details/79428049" target="_blank" rel="noopener">用crash工具分析Linux内核死锁的一次实战</a></li>
+<li><a href="http://oenhan.com/rwsem-realtime-task-hung" target="_blank" rel="noopener">读写信号量与实时进程阻塞挂死问题</a></li>
+<li><a href="https://blog.csdn.net/csq_year/article/details/49304477" target="_blank" rel="noopener">futex 相关</a></li>
+<li><a href="https://bugzilla.redhat.com/show_bug.cgi?id=669418" target="_blank" rel="noopener">https://bugzilla.redhat.com/show_bug.cgi?id=669418</a></li>
+<li><a href="https://blog.csdn.net/u010720841/article/details/39579515" target="_blank" rel="noopener">https://blog.csdn.net/u010720841/article/details/39579515</a></li>
+<li><a href="https://access.redhat.com/solutions/1593753" target="_blank" rel="noopener">https://access.redhat.com/solutions/1593753</a></li>
+<li><a href="https://access.redhat.com/support/cases/#/case/02133153" target="_blank" rel="noopener">https://access.redhat.com/support/cases/#/case/02133153</a></li>
+<li><a href="https://access.redhat.com/support/cases/#/case/01883655" target="_blank" rel="noopener">https://access.redhat.com/support/cases/#/case/01883655</a></li>
+</ul>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/kernel/" rel="tag"><i class="fa fa-tag"></i> kernel</a>
+          
+            <a href="/tags/core-dump/" rel="tag"><i class="fa fa-tag"></i> core dump</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/05/24/18-haproxy-keepalived多VIP部署/" rel="next" title="haproxy+keepalived 多 VIP 部署">
+                <i class="fa fa-chevron-left"></i> haproxy+keepalived 多 VIP 部署
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/icon.jpg" alt="Tomoku">
+            
+              <p class="site-author-name" itemprop="name">Tomoku</p>
+              <div class="site-description motion-element" itemprop="description">勿忘初心</div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">17</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  
+                    
+                      <a href="/tags/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">17</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+            <div class="links-of-author motion-element">
+              
+                <span class="links-of-author-item">
+                  
+                  
+                    
+                  
+                  
+                    
+                  
+                  <a href="https://github.com/Tomoku-dm" title="GitHub &rarr; https://github.com/Tomoku-dm" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+                </span>
+              
+                <span class="links-of-author-item">
+                  
+                  
+                    
+                  
+                  
+                    
+                  
+                  <a href="/dm990107744@gmail.com" title="E-Mail &rarr; dm990107744@gmail.com"><i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                </span>
+              
+            </div>
+          
+
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                推荐阅读
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.5isjyx.com/1234" title="http://www.5isjyx.com/1234" rel="noopener" target="_blank">福利网址</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+            
+          
+	 <iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width="298" height="52" src="//music.163.com/outchain/player?type=2&id=409650927&auto=0&height=32"></iframe>
+	  
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#一、前言"><span class="nav-number">1.</span> <span class="nav-text">一、前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#二、Core-dump-收集"><span class="nav-number">2.</span> <span class="nav-text">二、Core dump 收集</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#三、vmcore-分析环境部署"><span class="nav-number">3.</span> <span class="nav-text">三、vmcore 分析环境部署</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#vmcore-分析案例"><span class="nav-number">4.</span> <span class="nav-text">vmcore 分析案例</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#信号量锁-阶段"><span class="nav-number">4.1.</span> <span class="nav-text">信号量锁 阶段</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#自旋锁阶段"><span class="nav-number">4.2.</span> <span class="nav-text">自旋锁阶段</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#crash-常用命令"><span class="nav-number">5.</span> <span class="nav-text">crash 常用命令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考链接"><span class="nav-number">6.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Tomoku</span>
+
+  
+
+  
+</div>
+<!--
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.1.0</div>
+
+
+
+
+-->
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/utils.js?v=7.1.0"></script>
+
+  <script src="/js/motion.js?v=7.1.0"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/affix.js?v=7.1.0"></script>
+
+  <script src="/js/schemes/pisces.js?v=7.1.0"></script>
+
+
+
+
+  
+  <script src="/js/scrollspy.js?v=7.1.0"></script>
+<script src="/js/post-details.js?v=7.1.0"></script>
+
+
+
+  
+
+
+  <script src="/js/next-boot.js?v=7.1.0"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
