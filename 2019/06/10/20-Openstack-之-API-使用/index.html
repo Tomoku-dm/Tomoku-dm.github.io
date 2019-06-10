@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.1.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.1.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.1.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.1.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.1.0" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.1.0',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="前言本篇文章主要介绍 Openstack  API 的使用，在此之前我们先简单介绍一下 Openstack 。 Openstack 是一个搭建云平台的一个 IAAS 解决方案，可以看成就是一个软件。openstack能干什么呢，可以搭建公有云，私有云，企业云。 Openstack组件包括：  Compute(代号为“Nova”) 这个是最核心的，Nova最开始的时候，可以说是一套虚拟化管理程序，还">
+<meta name="keywords" content="python,openstack">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Openstack 之 API 使用">
+<meta property="og:url" content="http://yoursite.com/2019/06/10/20-Openstack-之-API-使用/index.html">
+<meta property="og:site_name" content="Tomoku&#39;s blog">
+<meta property="og:description" content="前言本篇文章主要介绍 Openstack  API 的使用，在此之前我们先简单介绍一下 Openstack 。 Openstack 是一个搭建云平台的一个 IAAS 解决方案，可以看成就是一个软件。openstack能干什么呢，可以搭建公有云，私有云，企业云。 Openstack组件包括：  Compute(代号为“Nova”) 这个是最核心的，Nova最开始的时候，可以说是一套虚拟化管理程序，还">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-06-10T12:54:43.319Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Openstack 之 API 使用">
+<meta name="twitter:description" content="前言本篇文章主要介绍 Openstack  API 的使用，在此之前我们先简单介绍一下 Openstack 。 Openstack 是一个搭建云平台的一个 IAAS 解决方案，可以看成就是一个软件。openstack能干什么呢，可以搭建公有云，私有云，企业云。 Openstack组件包括：  Compute(代号为“Nova”) 这个是最核心的，Nova最开始的时候，可以说是一套虚拟化管理程序，还">
+
+
+
+
+
+  
+  
+  <link rel="canonical" href="http://yoursite.com/2019/06/10/20-Openstack-之-API-使用/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Openstack 之 API 使用 | Tomoku's blog</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Tomoku's blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">在学习技术的道路上缓慢爬行</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/06/10/20-Openstack-之-API-使用/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Tomoku">
+      <meta itemprop="description" content="勿忘初心">
+      <meta itemprop="image" content="/images/icon.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Tomoku's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Openstack 之 API 使用
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2019-06-10 20:53:25 / 修改时间：20:54:43" itemprop="dateCreated datePublished" datetime="2019-06-10T20:53:25+08:00">2019-06-10</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>本篇文章主要介绍 Openstack  API 的使用，在此之前我们先简单介绍一下 <code>Openstack</code> 。</p>
+<p><code>Openstack</code> 是一个搭建云平台的一个 IAAS 解决方案，可以看成就是一个软件。openstack能干什么呢，可以搭建公有云，私有云，企业云。</p>
+<p><code>Openstack</code>组件包括：</p>
+<ul>
+<li><strong>Compute(代号为“Nova”)</strong><ul>
+<li>这个是最核心的，Nova最开始的时候，可以说是一套虚拟化管理程序，还可以管理网络和存储。</li>
+</ul>
+</li>
+<li><strong>Identity(代号为“Keystone”)</strong><ul>
+<li>这是提供身份认证和授权的组件。任何系统，身份认证和授权，其实都比较复杂。尤其Openstack 那么庞大的项目，每个组件都需要使用统一认证和授权。</li>
+</ul>
+</li>
+<li><strong>Dashboard(代号为“Horizon”)</strong><ul>
+<li>为所有OpenStack的服务提供了一个模块化的web-based用户界面。使用这个Web GUI，可以在云上完成大多数的操作，如启动实例，分配IP地址，设置访问控制等。</li>
+</ul>
+</li>
+<li><strong>Image Service(代号为“Glance”)</strong><ul>
+<li>镜像管理。目前Glance的镜像存储，支持本地存储，NFS，swift，sheepdog和Ceph，基本是够用了。<br>目前Glance的最大需求就是多个数据中心的镜像管理，如何复制，不过这个功能已经基本实现。还有就是租户私有的image管理，这些目前功能都已经实现。</li>
+</ul>
+</li>
+<li><strong>Network(代号为“Quantum”)</strong><ul>
+<li>这是网络管理的组件，也是重头戏，Openstack的未来，基本都要靠quantum。Quantum 后端可以是商业产品或者开源。开源产品支持Openvswitch，和linux bridge。网络设备厂商都在积极参与，让他们的产品支持Quantum。</li>
+</ul>
+</li>
+<li><strong>Object Storage(代号为“Swift”)</strong><ul>
+<li>对象存储组件，不是存储虚拟机的。</li>
+</ul>
+</li>
+<li><strong>Block Storage(代号为“Cinder”)</strong><ul>
+<li>这是存储管理的组件。Cinder存储管理主要是指虚拟机的存储管理。</li>
+</ul>
+</li>
+</ul>
+<h2 id="API-使用"><a href="#API-使用" class="headerlink" title="API 使用"></a>API 使用</h2><h4 id="一、获取-TOKEN-权限"><a href="#一、获取-TOKEN-权限" class="headerlink" title="一、获取 TOKEN 权限"></a>一、获取 TOKEN 权限</h4><ul>
+<li><p>在使用各组件 API 之前，必须通过认证拿到token。从 token 的结果中可以看到各组件 API 的 ip 入口。</p>
+</li>
+<li><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br><span class="line">262</span><br><span class="line">263</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> curl -X POST -H "Content-Type: application/json"  -d </span><br><span class="line">'&#123;</span><br><span class="line">    "auth":&#123;</span><br><span class="line">             "passwordCredentials":</span><br><span class="line">             &#123;</span><br><span class="line">                "username": "admin",</span><br><span class="line">                "password":"xxxxxxxxx"</span><br><span class="line">              &#125;,</span><br><span class="line">     "tenantName":"admin"            </span><br><span class="line">       &#125;</span><br><span class="line">&#125;' "http://172.20.31.10:35357/v2.0/tokens"</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">    "access": &#123;</span><br><span class="line">        "metadata": &#123;</span><br><span class="line">            "is_admin": 0,</span><br><span class="line">            "roles": [</span><br><span class="line">                "3fc758f9421249deb277db9fe1521b30",</span><br><span class="line">                "e4bbc640275b41869a0b3e6c6316b61f"</span><br><span class="line">            ]</span><br><span class="line">        &#125;,</span><br><span class="line">        "serviceCatalog": [</span><br><span class="line">            &#123;</span><br><span class="line">                "endpoints": [</span><br><span class="line">                    &#123;</span><br><span class="line">                        "adminURL": "http://172.20.31.10:8780",</span><br><span class="line">                        "id": "36568a30d4b9451eaa2af8a0be3a01d0",</span><br><span class="line">                        "internalURL": "http://172.20.31.10:8780",</span><br><span class="line">                        "publicURL": "http://172.20.31.10:8780",</span><br><span class="line">                        "region": "RegionOne"</span><br><span class="line">                    &#125;</span><br><span class="line">                ],</span><br><span class="line">                "endpoints_links": [],</span><br><span class="line">                "name": "placement",</span><br><span class="line">                "type": "placement"</span><br><span class="line">            &#125;,</span><br><span class="line">            &#123;</span><br><span class="line">                "endpoints": [</span><br><span class="line">                    &#123;</span><br><span class="line">                        "adminURL": "http://172.20.31.10:9696",</span><br><span class="line">                        "id": "4acd2d071f7149cb9da46a6ace3b40db",</span><br><span class="line">                        "internalURL": "http://172.20.31.10:9696",</span><br><span class="line">                        "publicURL": "http://172.20.31.10:9696",</span><br><span class="line">                        "region": "RegionOne"</span><br><span class="line">                    &#125;</span><br><span class="line">                ],</span><br><span class="line">                "endpoints_links": [],</span><br><span class="line">                "name": "neutron",</span><br><span class="line">                "type": "network"</span><br><span class="line">            &#125;,</span><br><span class="line">            &#123;</span><br><span class="line">                "endpoints": [</span><br><span class="line">                    &#123;</span><br><span class="line">                        "adminURL": "http://172.20.31.10:8776/v2/1bdf602d2e9d484fa8e645eeb2f7faa4",</span><br><span class="line">                        "id": "363a810c9bfe4381bf4a6daeedced071",</span><br><span class="line">                        "internalURL": "http://172.20.31.10:8776/v2/1bdf602d2e9d484fa8e645eeb2f7faa4",</span><br><span class="line">                        "publicURL": "http://172.20.31.10:8776/v2/1bdf602d2e9d484fa8e645eeb2f7faa4",</span><br><span class="line">                        "region": "RegionOne"</span><br><span class="line">                    &#125;</span><br><span class="line">                ],</span><br><span class="line">                "endpoints_links": [],</span><br><span class="line">                "name": "cinderv2",</span><br><span class="line">                "type": "volumev2"</span><br><span class="line">            &#125;,</span><br><span class="line">            &#123;</span><br><span class="line">                "endpoints": [</span><br><span class="line">                    &#123;</span><br><span class="line">                        "adminURL": "http://172.20.31.10:8776/v3/1bdf602d2e9d484fa8e645eeb2f7faa4",</span><br><span class="line">                        "id": "9f13a94e8ff4484795c1f87dfe08c0d1",</span><br><span class="line">                        "internalURL": "http://172.20.31.10:8776/v3/1bdf602d2e9d484fa8e645eeb2f7faa4",</span><br><span class="line">                        "publicURL": "http://172.20.31.10:8776/v3/1bdf602d2e9d484fa8e645eeb2f7faa4",</span><br><span class="line">                        "region": "RegionOne"</span><br><span class="line">                    &#125;</span><br><span class="line">                ],</span><br><span class="line">                "endpoints_links": [],</span><br><span class="line">                "name": "cinderv3",</span><br><span class="line">                "type": "volumev3"</span><br><span class="line">            &#125;,</span><br><span class="line">            &#123;</span><br><span class="line">                "endpoints": [</span><br><span class="line">                    &#123;</span><br><span class="line">                        "adminURL": "http://172.20.31.10:8042",</span><br><span class="line">                        "id": "d30e0cd250794c089954322d7592ce20",</span><br><span class="line">                        "internalURL": "http://172.20.31.10:8042",</span><br><span class="line">                        "publicURL": "http://172.20.31.10:8042",</span><br><span class="line">                        "region": "RegionOne"</span><br><span class="line">                    &#125;</span><br><span class="line">                ],</span><br><span class="line">                "endpoints_links": [],</span><br><span class="line">                "name": "aodh",</span><br><span class="line">                "type": "alarming"</span><br><span class="line">            &#125;,</span><br><span class="line">            &#123;</span><br><span class="line">                "endpoints": [</span><br><span class="line">                    &#123;</span><br><span class="line">                        "adminURL": "http://172.20.31.10:8041",</span><br><span class="line">                        "id": "12e3c6d69c7c45d5a5f2989c9516142b",</span><br><span class="line">                        "internalURL": "http://172.20.31.10:8041",</span><br><span class="line">                        "publicURL": "http://172.20.31.10:8041",</span><br><span class="line">                        "region": "RegionOne"</span><br><span class="line">                    &#125;</span><br><span class="line">                ],</span><br><span class="line">                "endpoints_links": [],</span><br><span class="line">                "name": "gnocchi",</span><br><span class="line">                "type": "metric"</span><br><span class="line">            &#125;,</span><br><span class="line">            &#123;</span><br><span class="line">                "endpoints": [</span><br><span class="line">                    &#123;</span><br><span class="line">                        "adminURL": "http://172.20.31.10:8774/v2/1bdf602d2e9d484fa8e645eeb2f7faa4",</span><br><span class="line">                        "id": "034b40f84cf84f3eb1fbf0f8b24e5e16",</span><br><span class="line">                        "internalURL": "http://172.20.31.10:8774/v2/1bdf602d2e9d484fa8e645eeb2f7faa4",</span><br><span class="line">                        "publicURL": "http://172.20.31.10:8774/v2/1bdf602d2e9d484fa8e645eeb2f7faa4",</span><br><span class="line">                        "region": "RegionOne"</span><br><span class="line">                    &#125;</span><br><span class="line">                ],</span><br><span class="line">                "endpoints_links": [],</span><br><span class="line">                "name": "nova_legacy",</span><br><span class="line">                "type": "compute_legacy"</span><br><span class="line">            &#125;,</span><br><span class="line">            &#123;</span><br><span class="line">                "endpoints": [</span><br><span class="line">                    &#123;</span><br><span class="line">                        "adminURL": "http://172.20.31.10:8000/v1",</span><br><span class="line">                        "id": "14dbbc32cdec4cc780bf7ec5c49ce255",</span><br><span class="line">                        "internalURL": "http://172.20.31.10:8000/v1",</span><br><span class="line">                        "publicURL": "http://172.20.31.10:8000/v1",</span><br><span class="line">                        "region": "RegionOne"</span><br><span class="line">                    &#125;</span><br><span class="line">                ],</span><br><span class="line">                "endpoints_links": [],</span><br><span class="line">                "name": "heat-cfn",</span><br><span class="line">                "type": "cloudformation"</span><br><span class="line">            &#125;,</span><br><span class="line">            &#123;</span><br><span class="line">                "endpoints": [</span><br><span class="line">                    &#123;</span><br><span class="line">                        "adminURL": "http://172.20.31.10:8777",</span><br><span class="line">                        "id": "564d882201004adab6cc9139320417b7",</span><br><span class="line">                        "internalURL": "http://172.20.31.10:8777",</span><br><span class="line">                        "publicURL": "http://172.20.31.10:8777",</span><br><span class="line">                        "region": "RegionOne"</span><br><span class="line">                    &#125;</span><br><span class="line">                ],</span><br><span class="line">                "endpoints_links": [],</span><br><span class="line">                "name": "ceilometer",</span><br><span class="line">                "type": "metering"</span><br><span class="line">            &#125;,</span><br><span class="line">            &#123;</span><br><span class="line">                "endpoints": [</span><br><span class="line">                    &#123;</span><br><span class="line">                        "adminURL": "http://172.20.31.10:8776/v1/1bdf602d2e9d484fa8e645eeb2f7faa4",</span><br><span class="line">                        "id": "7bc2ab9c836e42d7825b32ec1dd947a2",</span><br><span class="line">                        "internalURL": "http://172.20.31.10:8776/v1/1bdf602d2e9d484fa8e645eeb2f7faa4",</span><br><span class="line">                        "publicURL": "http://172.20.31.10:8776/v1/1bdf602d2e9d484fa8e645eeb2f7faa4",</span><br><span class="line">                        "region": "RegionOne"</span><br><span class="line">                    &#125;</span><br><span class="line">                ],</span><br><span class="line">                "endpoints_links": [],</span><br><span class="line">                "name": "cinder",</span><br><span class="line">                "type": "volume"</span><br><span class="line">            &#125;,</span><br><span class="line">            &#123;</span><br><span class="line">                "endpoints": [</span><br><span class="line">                    &#123;</span><br><span class="line">                        "adminURL": "http://172.20.31.10:8004/v1/1bdf602d2e9d484fa8e645eeb2f7faa4",</span><br><span class="line">                        "id": "11f6ba6343e342538a066fb8e2afed0c",</span><br><span class="line">                        "internalURL": "http://172.20.31.10:8004/v1/1bdf602d2e9d484fa8e645eeb2f7faa4",</span><br><span class="line">                        "publicURL": "http://172.20.31.10:8004/v1/1bdf602d2e9d484fa8e645eeb2f7faa4",</span><br><span class="line">                        "region": "RegionOne"</span><br><span class="line">                    &#125;</span><br><span class="line">                ],</span><br><span class="line">                "endpoints_links": [],</span><br><span class="line">                "name": "heat",</span><br><span class="line">                "type": "orchestration"</span><br><span class="line">            &#125;,</span><br><span class="line">            &#123;</span><br><span class="line">                "endpoints": [</span><br><span class="line">                    &#123;</span><br><span class="line">                        "adminURL": "http://172.20.31.10:8774/v2.1/1bdf602d2e9d484fa8e645eeb2f7faa4",</span><br><span class="line">                        "id": "7019da3f53094e298f99c992dfd9cfc7",</span><br><span class="line">                        "internalURL": "http://172.20.31.10:8774/v2.1/1bdf602d2e9d484fa8e645eeb2f7faa4",</span><br><span class="line">                        "publicURL": "http://172.20.31.10:8774/v2.1/1bdf602d2e9d484fa8e645eeb2f7faa4",</span><br><span class="line">                        "region": "RegionOne"</span><br><span class="line">                    &#125;</span><br><span class="line">                ],</span><br><span class="line">                "endpoints_links": [],</span><br><span class="line">                "name": "nova",</span><br><span class="line">                "type": "compute"</span><br><span class="line">            &#125;,</span><br><span class="line">            &#123;</span><br><span class="line">                "endpoints": [</span><br><span class="line">                    &#123;</span><br><span class="line">                        "adminURL": "http://172.20.31.10:9292",</span><br><span class="line">                        "id": "23742c0e49bd4702a68436b7b9a3d124",</span><br><span class="line">                        "internalURL": "http://172.20.31.10:9292",</span><br><span class="line">                        "publicURL": "http://172.20.31.10:9292",</span><br><span class="line">                        "region": "RegionOne"</span><br><span class="line">                    &#125;</span><br><span class="line">                ],</span><br><span class="line">                "endpoints_links": [],</span><br><span class="line">                "name": "glance",</span><br><span class="line">                "type": "image"</span><br><span class="line">            &#125;,</span><br><span class="line">            &#123;</span><br><span class="line">                "endpoints": [</span><br><span class="line">                    &#123;</span><br><span class="line">                        "adminURL": "http://172.20.31.10:8977",</span><br><span class="line">                        "id": "2323e2f4367c4a21b31e0063f8d0c7f5",</span><br><span class="line">                        "internalURL": "http://172.20.31.10:8977",</span><br><span class="line">                        "publicURL": "http://172.20.31.10:8977",</span><br><span class="line">                        "region": "RegionOne"</span><br><span class="line">                    &#125;</span><br><span class="line">                ],</span><br><span class="line">                "endpoints_links": [],</span><br><span class="line">                "name": "panko",</span><br><span class="line">                "type": "event"</span><br><span class="line">            &#125;,</span><br><span class="line">            &#123;</span><br><span class="line">                "endpoints": [</span><br><span class="line">                    &#123;</span><br><span class="line">                        "adminURL": "http://172.20.31.10:35357/v3",</span><br><span class="line">                        "id": "6f51ba03f943453e893e93f1f4fb9ad3",</span><br><span class="line">                        "internalURL": "http://172.20.31.10:5000/v3",</span><br><span class="line">                        "publicURL": "http://172.20.31.10:5000/v3",</span><br><span class="line">                        "region": "RegionOne"</span><br><span class="line">                    &#125;</span><br><span class="line">                ],</span><br><span class="line">                "endpoints_links": [],</span><br><span class="line">                "name": "keystone",</span><br><span class="line">                "type": "identity"</span><br><span class="line">            &#125;</span><br><span class="line">        ],</span><br><span class="line">        "token": &#123;</span><br><span class="line">            "audit_ids": [</span><br><span class="line">                "dTqX8utbQVKjekNznu5HSA"</span><br><span class="line">            ],</span><br><span class="line">            "expires": "2019-06-18T00:47:30.000000Z",</span><br><span class="line">            "id": "gAAAAABc_aiiuPpu6EelJCHVsEYjYXd1qy-jzOdXxjQ9CuqoZO_nd7bPjLTAow_0Sl7xkJC6kFHYiTGC9GLLtudZTunXtanTxRUGUrUF8VvQ7Cpi465GtYvOM-_yQYOPG8xgA5tyVIDRKz0V7W6tDi1-Ph07Dkj1HJ08iQxxxxxxxxxxxxxx",</span><br><span class="line">            "issued_at": "2019-06-10T00:47:30.000000Z",</span><br><span class="line">            "tenant": &#123;</span><br><span class="line">                "description": "Bootstrap project for initializing the cloud.",</span><br><span class="line">                "enabled": true,</span><br><span class="line">                "id": "1bdf602d2e9d484fa8e645eeb2f7faa4",</span><br><span class="line">                "name": "admin"</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;,</span><br><span class="line">        "user": &#123;</span><br><span class="line">            "id": "0d858f861c3140a5a31078eb0cbe6def",</span><br><span class="line">            "name": "admin",</span><br><span class="line">            "roles": [</span><br><span class="line">                &#123;</span><br><span class="line">                    "name": "heat_stack_owner"</span><br><span class="line">                &#125;,</span><br><span class="line">                &#123;</span><br><span class="line">                    "name": "admin"</span><br><span class="line">                &#125;</span><br><span class="line">            ],</span><br><span class="line">            "roles_links": [],</span><br><span class="line">            "username": "admin"</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h4 id="二、nova-组件API"><a href="#二、nova-组件API" class="headerlink" title="二、nova 组件API"></a>二、nova 组件API</h4><ul>
+<li><p>获取所有虚拟机(server)，注意：这里使用的是 admin 项目获取的 token，所以要看到所有项目的虚拟机，需要加 all_tenants=true，下面我只需要特定项目的所有机器，所以使用 project_id=xxx。</p>
+</li>
+<li><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> curl -X GET -H "X-Auth-Token: gAAAAABc9i2PAdWo-4MWE-kcVPDazv8rNLBxBB9UK8-X6kXA3mi8PLDm10cQpI-Fr7Yo1F-J2NiPTEAWcEKQvtDO2_MPghr0cvblaDuVifuRpfqYqKG_SXE3E5m_zUqU8KhjfiQOmaKUJq2tx4JpuDqcsoK0viAxxxxxx" "http://172.20.31.10:8774/v2.1/servers/detail?all_tenants=true&amp;project_id=4bf9b1cc0cb748a88b8526655734da2c" -s | python -m json.tool</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">    "servers": [</span><br><span class="line">        &#123;</span><br><span class="line">            "OS-DCF:diskConfig": "MANUAL",</span><br><span class="line">            "OS-EXT-AZ:availability_zone": "nova",</span><br><span class="line">            "OS-EXT-SRV-ATTR:host": "rg5-ostack005.cloud.hfb3.iflytek.net",</span><br><span class="line">            "OS-EXT-SRV-ATTR:hypervisor_hostname": "rg5-ostack005.cloud.hfb3.iflytek.net",</span><br><span class="line">            "OS-EXT-SRV-ATTR:instance_name": "instance-00001570",</span><br><span class="line">            "OS-EXT-STS:power_state": 1,</span><br><span class="line">            "OS-EXT-STS:task_state": null,</span><br><span class="line">            "OS-EXT-STS:vm_state": "active",</span><br><span class="line">            "OS-SRV-USG:launched_at": "2019-06-05T13:08:53.000000",</span><br><span class="line">            "OS-SRV-USG:terminated_at": null,</span><br><span class="line">            "accessIPv4": "",</span><br><span class="line">            "accessIPv6": "",</span><br><span class="line">            "addresses": &#123;</span><br><span class="line">                "Classical_Network_2": [</span><br><span class="line">                    &#123;</span><br><span class="line">                        "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:a9:51:c1",</span><br><span class="line">                        "OS-EXT-IPS:type": "fixed",</span><br><span class="line">                        "addr": "172.20.35.27",</span><br><span class="line">                        "version": 4</span><br><span class="line">                    &#125;</span><br><span class="line">                ]</span><br><span class="line">            &#125;,</span><br><span class="line">            "config_drive": "True",</span><br><span class="line">            "created": "2019-06-05T13:08:44Z",</span><br><span class="line">            "flavor": &#123;</span><br><span class="line">                "id": "f7e1c2a5-167c-4e1d-8de8-0a0034b8796c",</span><br><span class="line">                "links": [</span><br><span class="line">                    &#123;</span><br><span class="line">                        "href": "http://172.20.31.10:8774/flavors/f7e1c2a5-167c-4e1d-8de8-0a0034b8796c",</span><br><span class="line">                        "rel": "bookmark"</span><br><span class="line">                    &#125;</span><br><span class="line">                ]</span><br><span class="line">            &#125;,</span><br><span class="line">            "hostId": "59cc48a230b88736c992262b7b481c5fd3d01dce2ea2048ca60a6416",</span><br><span class="line">            "id": "a48a86e7-547b-4f3c-be5f-9c9bf29e2034",</span><br><span class="line">            "image": &#123;</span><br><span class="line">                "id": "b1c6d306-0eee-433d-b7f3-3d7946033eff",</span><br><span class="line">                "links": [</span><br><span class="line">                    &#123;</span><br><span class="line">                        "href": "http://172.20.31.10:8774/images/b1c6d306-0eee-433d-b7f3-3d7946033eff",</span><br><span class="line">                        "rel": "bookmark"</span><br><span class="line">                    &#125;</span><br><span class="line">                ]</span><br><span class="line">            &#125;,</span><br><span class="line">            "key_name": null,</span><br><span class="line">            "links": [</span><br><span class="line">                &#123;</span><br><span class="line">                    "href": "http://172.20.31.10:8774/v2.1/servers/a48a86e7-547b-4f3c-be5f-9c9bf29e2034",</span><br><span class="line">                    "rel": "self"</span><br><span class="line">                &#125;,</span><br><span class="line">                &#123;</span><br><span class="line">                    "href": "http://172.20.31.10:8774/servers/a48a86e7-547b-4f3c-be5f-9c9bf29e2034",</span><br><span class="line">                    "rel": "bookmark"</span><br><span class="line">                &#125;</span><br><span class="line">            ],</span><br><span class="line">            "metadata": &#123;&#125;,</span><br><span class="line">            "name": "2019.6.5-No.01",</span><br><span class="line">            "os-extended-volumes:volumes_attached": [</span><br><span class="line">                &#123;</span><br><span class="line">                    "id": "8eda595f-f83b-48f0-9aef-5c327ba489f2"</span><br><span class="line">                &#125;,</span><br><span class="line">                &#123;</span><br><span class="line">                    "id": "7a1632ae-f1ae-406c-a5a7-ccd5de377256"</span><br><span class="line">                &#125;,</span><br><span class="line">                &#123;</span><br><span class="line">                    "id": "7261e9e4-1781-4263-9a97-f7d86330ff1c"</span><br><span class="line">                &#125;</span><br><span class="line">            ],</span><br><span class="line">            "progress": 0,</span><br><span class="line">            "security_groups": [</span><br><span class="line">                &#123;</span><br><span class="line">                    "name": "default"</span><br><span class="line">                &#125;</span><br><span class="line">            ],</span><br><span class="line">            "status": "ACTIVE",</span><br><span class="line">            "tenant_id": "4bf9b1cc0cb748a88b8526655734da2c",</span><br><span class="line">            "updated": "2019-06-05T13:08:53Z",</span><br><span class="line">            "user_id": "49883c026fdf4cfeb5c660393f996973"</span><br><span class="line">        &#125;,</span><br><span class="line">        ...</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>获取所有物理机信息(hypervisors）</p>
+</li>
+<li><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> curl -X GET -H "X-Auth-Token: gAAAAABc9i2PAdWo-4MWE-kcVPDazv8rNLBxBB9UK8-X6kXA3mi8PLDm10cQpI-Fr7Yo1F-J2NiPTEAWcEKQvtDO2_MPghr0cvblaDuVifuRpfqYqKG_SXE3E5m_zUqU8KhjfiQOmaKUJq2tx4JpuDqcsoK0viAB5mxxxxx"  "http://172.20.31.10:8774/v2.1/os-hypervisors" -s | python -m json.tool</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">    "hypervisors": [</span><br><span class="line">        &#123;</span><br><span class="line">            "hypervisor_hostname": "rg5-ostack003.cloud.hfb3.iflytek.net",</span><br><span class="line">            "id": 4,</span><br><span class="line">            "state": "up",</span><br><span class="line">            "status": "enabled"</span><br><span class="line">        &#125;,</span><br><span class="line">        &#123;</span><br><span class="line">            "hypervisor_hostname": "rg5-ostack012.cloud.hfb3.iflytek.net",</span><br><span class="line">            "id": 7,</span><br><span class="line">            "state": "up",</span><br><span class="line">            "status": "enabled"</span><br><span class="line">        &#125;,</span><br><span class="line">        ...</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h4 id="三、Keystone-组件-API"><a href="#三、Keystone-组件-API" class="headerlink" title="三、Keystone 组件 API"></a>三、Keystone 组件 API</h4><ul>
+<li><p>获取所有项目</p>
+</li>
+<li><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> curl -X GET -H "X-Auth-Token: gAAAAABc9i2PAdWo-4MWE-kcVPDazv8rNLBxBB9UK8-X6kXA3mi8PLDm10cQpI-Fr7Yo1F-J2NiPTEAWcEKQvtDO2_MPghr0cvblaDuVifuRpfqYqKG_SXE3E5m_zUqU8KhjfiQOmaKUJq2tx4JpuDqcsoK0viAB5mi3XrcXxxxxxxxxx"  "http://172.20.31.10:5000/v3/projects" -s | python -m json.tool </span><br><span class="line">&#123;</span><br><span class="line">    "links": &#123;</span><br><span class="line">        "next": null,</span><br><span class="line">        "previous": null,</span><br><span class="line">        "self": "http://172.20.31.10:5000/v3/projects"</span><br><span class="line">    &#125;,</span><br><span class="line">        &#123;</span><br><span class="line">            "description": "Bootstrap project for initializing the cloud.",</span><br><span class="line">            "domain_id": "default",</span><br><span class="line">            "enabled": true,</span><br><span class="line">            "id": "1bdf602d2e9d484fa8e645eeb2f7faa4",</span><br><span class="line">            "is_domain": false,</span><br><span class="line">            "links": &#123;</span><br><span class="line">                "self": "http://172.20.31.10:5000/v3/projects/1bdf602d2e9d484fa8e645eeb2f7faa4"</span><br><span class="line">            &#125;,</span><br><span class="line">            "name": "admin",</span><br><span class="line">            "parent_id": "default"</span><br><span class="line">        &#125;,</span><br><span class="line">        &#123;</span><br><span class="line">            "description": "",</span><br><span class="line">            "domain_id": "default",</span><br><span class="line">            "enabled": true,</span><br><span class="line">            "id": "4bf9b1cc0cb748a88b8526655734da2c",</span><br><span class="line">            "is_domain": false,</span><br><span class="line">            "links": &#123;</span><br><span class="line">                "self": "http://172.20.31.10:5000/v3/projects/4bf9b1cc0cb748a88b8526655734da2c"</span><br><span class="line">            &#125;,</span><br><span class="line">            "name": "zazhao",</span><br><span class="line">            "parent_id": "default"</span><br><span class="line">        &#125;,</span><br><span class="line">        ...</span><br><span class="line">       </span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<ul>
+<li><p>获取所有用户</p>
+</li>
+<li><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> curl -X GET -H "X-Auth-Token: gAAAAABc9i2PAdWo-4MWE-kcVPDazv8rNLBxBB9UK8-X6kXA3mi8PLDm10cQpI-Fr7Yo1F-J2NiPTEAWcEKQvtDO2_MPghr0cvblaDuVifuRpfqYqKG_SXE3E5m_zUqU8KhjfiQOmaKUJq2tx4JpuDqcsoK0viAB5mi3Xrxxxxxxxxxxxx"  "http://172.20.31.10:5000/v3/users" -s | python -m json.tool</span><br><span class="line">&#123;</span><br><span class="line">    "links": &#123;</span><br><span class="line">        "next": null,</span><br><span class="line">        "previous": null,</span><br><span class="line">        "self": "http://172.20.31.10:5000/v3/users"</span><br><span class="line">    &#125;,</span><br><span class="line">    "users": [</span><br><span class="line">        &#123;</span><br><span class="line">            "description": "",</span><br><span class="line">            "domain_id": "default",</span><br><span class="line">            "email": "",</span><br><span class="line">            "enabled": true,</span><br><span class="line">            "id": "003f4fc6c5264b53ae04bd9142800ebd",</span><br><span class="line">            "links": &#123;</span><br><span class="line">                "self": "http://172.20.31.10:5000/v3/users/003f4fc6c5264b53ae04bd9142800ebd"</span><br><span class="line">            &#125;,</span><br><span class="line">            "name": "xiangxia",</span><br><span class="line">            "options": &#123;&#125;,</span><br><span class="line">            "password_expires_at": null</span><br><span class="line">        &#125;,</span><br><span class="line">        &#123;</span><br><span class="line">            "description": "",</span><br><span class="line">            "domain_id": "default",</span><br><span class="line">            "email": "",</span><br><span class="line">            "enabled": true,</span><br><span class="line">            "id": "016745db50bd45bb9c390362dc998fee",</span><br><span class="line">            "links": &#123;</span><br><span class="line">                "self": "http://172.20.31.10:5000/v3/users/016745db50bd45bb9c390362dc998fee"</span><br><span class="line">            &#125;,</span><br><span class="line">            "name": "xqxie3",</span><br><span class="line">            "options": &#123;&#125;,</span><br><span class="line">            "password_expires_at": null</span><br><span class="line">        &#125;,</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h2 id="Python-处理-API-输出"><a href="#Python-处理-API-输出" class="headerlink" title="Python 处理 API 输出"></a>Python 处理 API 输出</h2><p>通过 API 拿到 json 格式的信息后，我们就可以使用python 来处理格式化了，python 处理 json 文件就是处理字典。下面简单写个例子：</p>
+<ul>
+<li><p>更新 token 文件，通过 shell 脚本实现</p>
+</li>
+<li><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> curl -X POST  http://172.20.31.10:35357/v2.0/tokens -H "Content-Type: application/json"   -d '&#123;"auth":&#123;"passwordCredentials":&#123;"username": "admin","password":"yq1000lmgs1cl!@#"&#125;,"tenantName":"admin"&#125;&#125;' | python -m json.tool  &gt; token-tmp.txt</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>使用上述 shell 脚本 更新token，并更新 获取的server 和 user 信息，</p>
+</li>
+<li><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> subprocess</span><br><span class="line"><span class="keyword">import</span> json</span><br><span class="line"></span><br><span class="line"><span class="comment">## get token</span></span><br><span class="line">cmd_token = <span class="string">"/usr/bin/sh /home/dlp/mudu/scripts/openstack/curl-api/get-token.sh"</span></span><br><span class="line">sub_token = subprocess.Popen(cmd_token, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=<span class="literal">True</span>)</span><br><span class="line"><span class="keyword">with</span> open(<span class="string">"/home/dlp/mudu/scripts/openstack/curl-api/token-tmp.txt"</span>,<span class="string">'r'</span>) <span class="keyword">as</span> token_f:</span><br><span class="line">        token_temp = json.loads(token_f.read())</span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(len(token_temp)):</span><br><span class="line">        token = token_temp[<span class="string">'access'</span>][<span class="string">'token'</span>][<span class="string">'id'</span>]</span><br><span class="line"><span class="comment">#       print token</span></span><br><span class="line"></span><br><span class="line"><span class="comment">## update server and user file</span></span><br><span class="line"></span><br><span class="line">cmd_uuser = <span class="string">"curl -X GET -H \"X-Auth-Token: "</span> + token + <span class="string">"\"  \"http://172.20.31.10:5000/v3/users\" -s | python -m json.tool &gt; /home/dlp/mudu/scripts/openstack/curl-api/user-source "</span></span><br><span class="line">cmd_userver = <span class="string">"curl -X GET -H \"X-Auth-Token: "</span> + token + <span class="string">"\"  \"http://172.20.31.10:8774/v2.1/servers/detail?all_tenants=true&amp;project_id=4bf9b1cc0cb748a88b8526655734da2c\" -s | python -m json.tool &gt; /home/dlp/mudu/scripts/openstack/curl-api/server-source "</span></span><br><span class="line"></span><br><span class="line">sub_uuser = subprocess.Popen(cmd_uuser, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=<span class="literal">True</span>)</span><br><span class="line">sub_userver = subprocess.Popen(cmd_userver, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=<span class="literal">True</span>)</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>格式化 获取到的信息，将 用户 和 虚拟机 对应输出。</p>
+</li>
+<li><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> json</span><br><span class="line"><span class="keyword">import</span> collections</span><br><span class="line"><span class="keyword">import</span> subprocess</span><br><span class="line">servers_dict = &#123;&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">## get servers and user_id</span></span><br><span class="line"><span class="keyword">with</span> open(<span class="string">"/home/dlp/mudu/scripts/openstack/curl-api/server-source"</span>,<span class="string">'r'</span>) <span class="keyword">as</span> server_f:</span><br><span class="line">	server_temp = json.loads(server_f.read())</span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(len(server_temp[<span class="string">'servers'</span>])):</span><br><span class="line"><span class="comment">#	print i</span></span><br><span class="line">	addrtemp = server_temp[<span class="string">'servers'</span>][i][<span class="string">'addresses'</span>].values()</span><br><span class="line">	servers_dict[i] = &#123;<span class="string">"ip"</span>:addrtemp[<span class="number">0</span>][<span class="number">0</span>][<span class="string">'addr'</span>].encode(<span class="string">'utf-8'</span>),<span class="string">"user_id"</span>:server_temp[<span class="string">'servers'</span>][i][<span class="string">'user_id'</span>].encode(<span class="string">'utf-8'</span>)&#125;</span><br><span class="line"><span class="comment">#	print addtemp[0][0]['addr']</span></span><br><span class="line"><span class="comment">#	print temp['servers'][i]['user_id']</span></span><br><span class="line">	<span class="comment">#print servers_dict[0]</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">## get users and  set group</span></span><br><span class="line"><span class="keyword">with</span> open(<span class="string">"/home/dlp/mudu/scripts/openstack/curl-api/user-source"</span>,<span class="string">'r'</span>) <span class="keyword">as</span> user_f:</span><br><span class="line">        user_temp = json.loads(user_f.read())</span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(len(user_temp[<span class="string">'users'</span>])):</span><br><span class="line">	<span class="comment">#print user_temp['users'][i]['name']</span></span><br><span class="line">	<span class="comment">#print user_temp['users'][i]['id']</span></span><br><span class="line">	<span class="keyword">for</span> j <span class="keyword">in</span> servers_dict:</span><br><span class="line">		<span class="comment">#print servers_dict[j]['user_id']</span></span><br><span class="line">		<span class="keyword">if</span> user_temp[<span class="string">'users'</span>][i][<span class="string">'id'</span>] == servers_dict[j][<span class="string">'user_id'</span>]:</span><br><span class="line">			servers_dict[j][<span class="string">"username"</span>] = user_temp[<span class="string">'users'</span>][i][<span class="string">'name'</span>].encode(<span class="string">'utf-8'</span>)</span><br><span class="line">			cmd = <span class="string">"id "</span> + user_temp[<span class="string">'users'</span>][i][<span class="string">'name'</span>].encode(<span class="string">'utf-8'</span>) + <span class="string">"  | awk '&#123;print $2&#125;' | awk '&#123;match($0,/\([^()]*\)/);print substr($0,RSTART+1,RLENGTH-2)&#125;'"</span></span><br><span class="line">			sub = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=<span class="literal">True</span>)</span><br><span class="line">			servers_dict[j][<span class="string">"group"</span>] = sub.stdout.read().strip(<span class="string">'\n'</span>)</span><br><span class="line">			<span class="keyword">print</span> servers_dict[j]</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><a href="https://developer.openstack.org/api-ref/compute/?expanded=add-associate-floating-ip-addfloatingip-action-deprecated-detail#create-server" target="_blank" rel="noopener">Openstack API</a></li>
+<li><a href="https://blog.csdn.net/nirendao/article/details/54977717" target="_blank" rel="noopener">获取token 通过 python</a></li>
+</ul>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/python/" rel="tag"><i class="fa fa-tag"></i> python</a>
+          
+            <a href="/tags/openstack/" rel="tag"><i class="fa fa-tag"></i> openstack</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/05/31/15-linux-coredump分析——信号量及自旋锁/" rel="next" title="linux coredump 分析——信号量及自旋锁">
+                <i class="fa fa-chevron-left"></i> linux coredump 分析——信号量及自旋锁
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/icon.jpg" alt="Tomoku">
+            
+              <p class="site-author-name" itemprop="name">Tomoku</p>
+              <div class="site-description motion-element" itemprop="description">勿忘初心</div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">18</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  
+                    
+                      <a href="/tags/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">18</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+            <div class="links-of-author motion-element">
+              
+                <span class="links-of-author-item">
+                  
+                  
+                    
+                  
+                  
+                    
+                  
+                  <a href="https://github.com/Tomoku-dm" title="GitHub &rarr; https://github.com/Tomoku-dm" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+                </span>
+              
+                <span class="links-of-author-item">
+                  
+                  
+                    
+                  
+                  
+                    
+                  
+                  <a href="/dm990107744@gmail.com" title="E-Mail &rarr; dm990107744@gmail.com"><i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                </span>
+              
+            </div>
+          
+
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                推荐阅读
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.5isjyx.com/1234" title="http://www.5isjyx.com/1234" rel="noopener" target="_blank">福利网址</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+            
+          
+	 <iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width="298" height="52" src="//music.163.com/outchain/player?type=2&id=409650927&auto=0&height=32"></iframe>
+	  
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#API-使用"><span class="nav-number">2.</span> <span class="nav-text">API 使用</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#一、获取-TOKEN-权限"><span class="nav-number">2.0.1.</span> <span class="nav-text">一、获取 TOKEN 权限</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#二、nova-组件API"><span class="nav-number">2.0.2.</span> <span class="nav-text">二、nova 组件API</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#三、Keystone-组件-API"><span class="nav-number">2.0.3.</span> <span class="nav-text">三、Keystone 组件 API</span></a></li></ol></li></ol><li class="nav-item nav-level-2"><a class="nav-link" href="#Python-处理-API-输出"><span class="nav-number">3.</span> <span class="nav-text">Python 处理 API 输出</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Tomoku</span>
+
+  
+
+  
+</div>
+<!--
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.1.0</div>
+
+
+
+
+-->
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/utils.js?v=7.1.0"></script>
+
+  <script src="/js/motion.js?v=7.1.0"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/affix.js?v=7.1.0"></script>
+
+  <script src="/js/schemes/pisces.js?v=7.1.0"></script>
+
+
+
+
+  
+  <script src="/js/scrollspy.js?v=7.1.0"></script>
+<script src="/js/post-details.js?v=7.1.0"></script>
+
+
+
+  
+
+
+  <script src="/js/next-boot.js?v=7.1.0"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
