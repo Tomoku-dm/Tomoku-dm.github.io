@@ -84,7 +84,8 @@ search:
 ## Docs: https://hexo.io/docs/deployment.html
 deploy:
     type: git
-    repository: https://github.com/Tomoku-dm/Tomoku-dm.github.io
+#    repository: https://github.com/Tomoku-dm/Tomoku-dm.github.io
+    repository: git@github.com:Tomoku-dm/Tomoku-dm.github.io.git
     branch: master
     message: update
 

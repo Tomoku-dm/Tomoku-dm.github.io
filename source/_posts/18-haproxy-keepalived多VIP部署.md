@@ -142,9 +142,9 @@ server nomachine15 172.20.9.15:4000 check inter 5000 fall 3
    }
    
    vrrp_script chk_haproxy {
-   	script "/etc/keepalived/chk_haproxy.sh"      ## 自定义服务检测脚本位置
+   	script "/etc/keepalived/chk_haproxy.sh"      ## 自定义服务检测脚本位置，脚本一定要有可执行权限
    	interval 4
-   	weight -50                                   ## 当脚本返回值为复数时对 priority 做加法，如果 weight 是负数，priority 会越来与越小，小于 backup 的 priority 时 ，vip 会漂移过去。
+   	weight -120                                   ## 当脚本返回值为复数时对 priority 做加法，如果 weight 是负数，priority 会越来与越小，小于 backup 的 priority 时 ，vip 会漂移过去。
    	}
    
    vrrp_instance VI_1 {
@@ -183,14 +183,14 @@ server nomachine15 172.20.9.15:4000 check inter 5000 fall 3
    vrrp_script chk_haproxy {
    	script "/etc/keepalived/chk_haproxy.sh"
    	interval 4
-   	weight -50
+   	weight -120
    	}
    
    vrrp_instance VI_1 {
        state BACKUP
        interface eth0
        virtual_router_id 55                         ## 必须和 master 的一致
-       priority 50                                  ## 如果这个值高于 200 会抢来vip，如果相等，master 持有vip
+       priority 100                                  ## 如果这个值高于 200 会抢来vip，如果相等，master 持有vip
        advert_int 1
        authentication {
            auth_type PASS
@@ -230,7 +230,7 @@ server nomachine15 172.20.9.15:4000 check inter 5000 fall 3
    vrrp_script chk_haproxy {
    	script "/etc/keepalived/chk_haproxy.sh"
    	interval 4
-   	weight -50
+   	weight -120
    	}
    
    vrrp_instance VI_1 {
@@ -287,7 +287,7 @@ server nomachine15 172.20.9.15:4000 check inter 5000 fall 3
    vrrp_script chk_haproxy {
    	script "/etc/keepalived/chk_haproxy.sh"
    	interval 4
-   	weight -50
+   	weight -120
    }
    
    vrrp_instance VI_1 {
@@ -368,7 +368,7 @@ server nomachine15 172.20.9.15:4000 check inter 5000 fall 3
    fi
    ```
 
-2. 只是根据 haproxy 服务 情况 返回 0/1，适合haproxy 可以自己恢复的情况。
+2. 上面直接关闭 keepalived 服务过于暴力，下面脚本根据 haproxy 服务情况返回 0/1，在 haproxy 恢复正常后，脚本执行返回0 会增加 priority 夺回 master 的 VIP
 
    ```yml
    #!/bin/bash
@@ -380,8 +380,77 @@ server nomachine15 172.20.9.15:4000 check inter 5000 fall 3
    fi
    ```
 
-   
+## 六、keepalived 原理
+
+### Master 选举
+
+keepalived 中优先级高的节点为MASTER。MASTER其中一个职责就是响应VIP的arp包，将VIP和mac地址映射关系告诉局域网内其他主机，同时，它还会以多播的形式（目的地址224.0.0.18）向局域网中发送VRRP通告，告知自己的优先级。
+
+网络中的所有 BACKUP 节点只负责处理 MASTER 发出的多播包，当发现 MASTER 的优先级没自己高，或者没收到 MASTER 的 VRRP 通告时，BACKUP 将自己切换到 MASTER 状态，然后做MASTER该做的事：1.响应arp包，2.发送VRRP通告。
+
+MASTER 和 BACKUP 节点的优先级如何调整？  
+首先，每个节点有一个初始优先级，由配置文件中的 priority 配置项指定，MASTER节点的 priority 应比 BAKCUP 高。运行过程中 keepalived 根据 vrrp_script 的weight设定，增加或减小节点优先级。规则如下：
+
+1. 当weight > 0时，vrrp_script script脚本执行返回**0**(成功)时优先级为priority + weight, 否则为priority。当BACKUP发现自己的优先级大于MASTER通告的优先级时，进行主从切换。
+2. 当weight < 0时，vrrp_script script脚本执行返回**非0**(失败)时优先级为priority + weight, 否则为priority。当BACKUP发现自己的优先级大于MASTER通告的优先级时，进行主从切换。 3. 当两个节点的优先级相同时，以节点发送VRRP通告的IP作为比较对象，IP较大者为MASTER。
+
+
+## 七、抓包分析 VIP 浮动
+原理我们分析完之后，我们通过 tcpdump 的抓包来看一下 vrrp 协议的包是怎么发出的。
+
+```c
+## 首先我们在两台 master 正常工作的情况下，关闭 172.20.35.5 的 haproxy 服务。
+
+15:10:36.353732 IP 172.20.35.5 > 224.0.0.18: VRRPv2, Advertisement, vrid 55, prio 200, authtype simple, intvl 1s, length 20
+15:10:36.775313 IP 172.20.35.11 > 224.0.0.18: VRRPv2, Advertisement, vrid 56, prio 200, authtype simple, intvl 1s, length 20
+15:10:37.353915 IP 172.20.35.5 > 224.0.0.18: VRRPv2, Advertisement, vrid 55, prio 200, authtype simple, intvl 1s, length 20
+15:10:37.775889 IP 172.20.35.11 > 224.0.0.18: VRRPv2, Advertisement, vrid 56, prio 200, authtype simple, intvl 1s, length 20    
+15:10:38.354610 IP 172.20.35.5 > 224.0.0.18: VRRPv2, Advertisement, vrid 55, prio 80, authtype simple, intvl 1s, length 20       ##此刻脚本返回失败，prio --> 80
+15:10:38.355158 IP 172.20.35.11 > 224.0.0.18: VRRPv2, Advertisement, vrid 55, prio 100, authtype simple, intvl 1s, length 20
+15:10:38.355301 IP 172.20.35.5 > 224.0.0.18: VRRPv2, Advertisement, vrid 55, prio 80, authtype simple, intvl 1s, length 20
+15:10:38.355729 IP 172.20.35.11 > 224.0.0.18: VRRPv2, Advertisement, vrid 55, prio 100, authtype simple, intvl 1s, length 20     ##35.11 发现自己的prio 更高转为master 发送广播，35.5 不再发送广播
+15:10:38.776399 IP 172.20.35.11 > 224.0.0.18: VRRPv2, Advertisement, vrid 56, prio 200, authtype simple, intvl 1s, length 20
+15:10:39.356102 IP 172.20.35.11 > 224.0.0.18: VRRPv2, Advertisement, vrid 55, prio 100, authtype simple, intvl 1s, length 20
+
+
+## 此时 35.5 已经失去了 230 的 VIP 
+
+$ ip a
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP qlen 1000
+    link/ether fa:16:3e:04:91:24 brd ff:ff:ff:ff:ff:ff
+    inet 172.20.35.5/24 brd 172.20.35.255 scope global dynamic eth0
+       valid_lft 40538sec preferred_lft 40538sec
+    inet6 fe80::f816:3eff:fe04:9124/64 scope link 
+       valid_lft forever preferred_lft forever
+
+
+## 然后我们重新开启 35.5 的 haproxy 服务，观察 35.5 的 prio -->200 抢回 mastre 角色以及 230 的 VIP
+
+
+15:15:46.959076 IP 172.20.35.11 > 224.0.0.18: VRRPv2, Advertisement, vrid 56, prio 200, authtype simple, intvl 1s, length 20
+15:15:47.454475 IP 172.20.35.11 > 224.0.0.18: VRRPv2, Advertisement, vrid 55, prio 100, authtype simple, intvl 1s, length 20
+15:15:47.454724 IP 172.20.35.5 > 224.0.0.18: VRRPv2, Advertisement, vrid 55, prio 200, authtype simple, intvl 1s, length 20
+15:15:47.456099 IP 172.20.35.11 > 224.0.0.18: VRRPv2, Advertisement, vrid 55, prio 100, authtype simple, intvl 1s, length 20
+15:15:47.456236 IP 172.20.35.5 > 224.0.0.18: VRRPv2, Advertisement, vrid 55, prio 200, authtype simple, intvl 1s, length 20
+15:15:47.959700 IP 172.20.35.11 > 224.0.0.18: VRRPv2, Advertisement, vrid 56, prio 200, authtype simple, intvl 1s, length 20
+
+
+$ ip a
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP qlen 1000
+    link/ether fa:16:3e:04:91:24 brd ff:ff:ff:ff:ff:ff
+    inet 172.20.35.5/24 brd 172.20.35.255 scope global dynamic eth0
+       valid_lft 40418sec preferred_lft 40418sec
+    inet 172.20.35.230/32 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::f816:3eff:fe04:9124/64 scope link 
+       valid_lft forever preferred_lft forever
+```
+
 
 ## 参考文章
 
 - [keepalived 之 vrrp_script详解](https://www.cnblogs.com/arjenlee/p/9258188.html)
+
+
+
+
