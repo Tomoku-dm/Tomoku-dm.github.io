@@ -97,7 +97,7 @@
 
 
   <meta name="description" content="前言虚拟文件系统作为内核的子系统为用户空间程序和真正的多个文件系统直接提供了一个接口。简单来说。系统调用先和 VFS 交互，然后 VFS 提供的通用接口在被各个文件系统来实现。 通用文件系统接口虚拟文件系统，一个胶水层，位于内核的底层和用户层之间。它提供了各种抽象数据结构来表示文件和inode，而真实文件系统的实现必须填充这些结构，使得应用程序无需考虑底层文件系统，总是可以使用同样的接口访问和操作">
-<meta name="keywords" content="filesystem,kernel">
+<meta name="keywords" content="kernel,filesystem">
 <meta property="og:type" content="article">
 <meta property="og:title" content="VFS 虚拟文件系统">
 <meta property="og:url" content="http://yoursite.com/2018/09/10/9-VFS虚拟文件系统/index.html">
@@ -485,9 +485,9 @@
       
         <div class="post-tags">
           
-            <a href="/tags/filesystem/" rel="tag"><i class="fa fa-tag"></i> filesystem</a>
-          
             <a href="/tags/kernel/" rel="tag"><i class="fa fa-tag"></i> kernel</a>
+          
+            <a href="/tags/filesystem/" rel="tag"><i class="fa fa-tag"></i> filesystem</a>
           
         </div>
       
